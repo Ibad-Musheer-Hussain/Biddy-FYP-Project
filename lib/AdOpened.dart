@@ -55,7 +55,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
         .child('price')
         .onValue
         .listen((event) {
-      if (flag != 0) {
+      if (flag < 1) {
         print("value changed"); // change to snackbar later //neccessary
       }
       flag++;
@@ -68,7 +68,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
     });
   }
 
-  Future<void> updateCarPrice_GPT(
+  Future<void> updateCarPrice(
       String adId, int Price, String collectionaddress) async {
     try {
       DocumentReference adRefFirestore =
@@ -711,7 +711,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                     onTap: () {
                       bool isUserLoggedin = (auth != null);
                       if (isUserLoggedin) {
-                        updateCarPrice_GPT(
+                        updateCarPrice(
                             products.id, 12, products.collectionValue);
                       } else {
                         Navigator.of(context).pushReplacement(

@@ -583,12 +583,11 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                 // Filter documents based on search query
                                 final filteredDocs = allSnapshots.where((doc) {
                                   final vehicleName =
-                                      doc['brand'].toString().toLowerCase();
+                                      doc['model'].toString().toLowerCase();
                                   final price = doc['price']
                                       as int; // Assuming price is stored as an integer
                                   final year = doc['year']
                                       as int; // Assuming year is stored as an integer
-                                  //final kmsDriven = doc['kmsDriven']as int; // Assuming kmsDriven is stored as an integer
                                   final time = doc['timestamp2'];
                                   final currentTime = storeTimestamp();
                                   return vehicleName.contains(_searchQuery) &&
@@ -617,10 +616,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                               year <=
                                                   (int.tryParse(YearMax.text.toString()) ??
                                                       double.infinity)));
-                                  /*&& // minYear and maxYear are the range endpoints
-                                      kmsDriven >= 10 &&
-                                      kmsDriven <=
-                                          1000000000; // minKms and maxKms are the range endpoints*/
                                 }).toList();
 
                                 if (filteredDocs.isEmpty) {
