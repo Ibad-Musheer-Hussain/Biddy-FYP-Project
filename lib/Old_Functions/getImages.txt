@@ -1,0 +1,66 @@
+Container(
+                      width: MediaQuery.of(context).size.width,
+                      color: Colors.black,
+                      height: 200,
+                      child: Stack(
+                        children: [
+                          Stack(
+                            children: [
+                              AnimatedPositioned(
+                                duration: Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                                left: _showFirstContainer
+                                    ? 0
+                                    : -MediaQuery.of(context).size.width,
+                                child: Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                        borderRadius: BorderRadius.circular(12), //36
+                        color: Color.fromARGB(255, 255, 218, 223),
+                      ),
+                      child: Column(children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.only(right: 40.0),
+                          child: Text(
+                            "Welcome to Biddy",
+                            style: TextStyle(
+                                fontSize: 29,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black),
+                          ),
+                        ),
+                        LoginTextField(
+                          textEditingController: email,
+                          hintText: "Email",
+                          obscureText: false,
+                        ),
+                      ]),
+                    ),
+                              ),
+                              AnimatedPositioned(
+                                duration: Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                                right: _showFirstContainer
+                                    ? -MediaQuery.of(context).size.width
+                                    : 0,
+                                child: Container(
+                                  width: MediaQuery.of(context).size.width,
+                                  height: 200,
+                                  color: Colors.green,
+                                  child: Center(
+                                    child: Text('Second Container'),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),

@@ -1,0 +1,168 @@
+import 'package:biddy/Redundant%20Dart%20Files/Login.txt';
+import 'package:biddy/components/FABcustom.dart';
+import 'package:biddy/components/LoginTextField.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+class Signup extends StatefulWidget {
+  const Signup({super.key});
+
+  @override
+  State<Signup> createState() => _SignupState();
+}
+
+class _SignupState extends State<Signup> {
+  final TextEditingController email = TextEditingController();
+  final TextEditingController pass = TextEditingController();
+  final TextEditingController username = TextEditingController();
+  final TextEditingController phone = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  void register() async {
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: email.text.toString(),
+        password: pass.text.toString(),
+      );
+      User? user = _auth.currentUser;
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user?.uid)
+            .set({
+          'role': pass.text.toString(),
+        });
+        print('Firestore data stored successfully');
+      } catch (e) {
+        print('Firestore error: $e');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          'Your account has been created',
+          style: TextStyle(color: Colors.black),
+        ),
+        backgroundColor: Colors.grey[300],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        duration: Duration(seconds: 4), // SnackBar duration
+      ));
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => Login()),
+      );
+    } catch (e) {
+      if (e is FirebaseAuthException) {
+        if (e.code == 'invalid-email') {}
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      //backgroundColor: Colors.grey[300],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 250, 250, 250),
+              Color.fromARGB(255, 255, 149, 163)
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.asset(
+                        'assets/images/Biddy.png',
+                        height: 200,
+                        width: 200,
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                        borderRadius: BorderRadius.circular(36),
+                        color: Color.fromARGB(255, 255, 218, 223),
+                      ),
+                      child: Column(children: <Widget>[
+                        LoginTextField(
+                          textEditingController: email,
+                          hintText: "Email",
+                          obscureText: false,
+                        ),
+                        LoginTextField(
+                          textEditingController: pass,
+                          hintText: "Password",
+                          obscureText: false,
+                        ), // USE ANOTHER PAGE FOR UNAME AND NUMBER
+                        // ON ONE PAGE IT LOOKS SHIT
+                        SizedBox(
+                          height: 15,
+                        ),
+                      ]),
+                    ),
+                    SizedBox(
+                      height: 15,
+                    ),
+                    FABcustom(
+                      onTap: () {
+                        register();
+                      },
+                      text: "Sign Up",
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text("Already a user?"),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/login',
+                            );
+                          },
+                          child: Text(
+                            "Sign In",
+                            style: TextStyle(
+                              color: Colors.pink,
+                              fontWeight: FontWeight.bold,
+                              //decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

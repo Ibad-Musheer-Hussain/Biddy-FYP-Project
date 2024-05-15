@@ -1,0 +1,66 @@
+IMPLEMENT VERSION TO MAKE THIS WORK (THIS IS BETTER THAN THE GPT VERSION)
+
+Future<void> updateCarPrice_Bard(String adId, int price) async {
+    try {
+      DocumentReference adRefFirestore = FirebaseFirestore.instance
+          .collection('Ads')
+          .doc('Cars')
+          .collection('Sedan')
+          .doc(adId);
+
+      DatabaseReference adRefRealtime = FirebaseDatabase.instance
+          .reference()
+          .child('adsCollection')
+          .child('Cars')
+          .child('Sedan')
+          .child(adId);
+
+      // Get the latest data before the transaction from Firestore
+      DocumentSnapshot adSnapshotBefore = await adRefFirestore.get();
+      int priceBefore = adSnapshotBefore.exists
+          ? (adSnapshotBefore.data() != null
+              ? (adSnapshotBefore.data()! as Map<String, dynamic>)['price'] ?? 0
+              : 0)
+          : 0;
+      int expectedVersion = adSnapshotBefore.exists &&
+              adSnapshotBefore.data() != null
+          ? (adSnapshotBefore.data()! as Map<String, dynamic>)['version'] ?? 1
+          : 1; // Default version if document doesn't exist
+      print('Price before transaction (Firestore): $priceBefore');
+
+      // Calculate the new price (assuming a fixed increment)
+      //int newPrice = priceBefore + 500;
+      int newPrice = 909090909;
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        DocumentSnapshot adSnapshot = await transaction.get(adRefFirestore);
+
+        if (adSnapshot.exists &&
+            adSnapshot.data() != null &&
+            (adSnapshot.data()! as Map<String, dynamic>)['version'] !=
+                expectedVersion) {
+          throw 'Another user has updated the price. Please try again later.';
+        }
+
+        await transaction.update(adRefFirestore, {
+          'price': newPrice,
+          'version':
+              expectedVersion + 1, // Increment version after successful update
+        });
+      });
+
+      await adRefRealtime
+          .update({'price': newPrice}); // Update Realtime Database
+
+      DocumentSnapshot adSnapshotAfter = await adRefFirestore.get();
+      int priceAfter = adSnapshotAfter.exists
+          ? (adSnapshotAfter.data() != null
+              ? (adSnapshotAfter.data()! as Map<String, dynamic>)['price'] ?? 0
+              : 0)
+          : 0;
+      print('Price after transaction (Firestore): $priceAfter');
+    } catch (error) {
+      print('Error updating car price: $error');
+      // Handle errors, notify the user about potential conflicts, etc.
+    }
+  }

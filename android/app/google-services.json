@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1025246402551",
+    "firebase_url": "https://biddy-45c49-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "biddy-45c49",
+    "storage_bucket": "biddy-45c49.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1025246402551:android:a63f4208693f354d9f80f2",
+        "android_client_info": {
+          "package_name": "com.example.biddy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1025246402551-3d0mhj7vs72k089uuo4u7ckosp06pfh9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.biddy",
+            "certificate_hash": "08c15ca5a748ebc2923cc35064849e6e4c41ce8d"
+          }
+        },
+        {
+          "client_id": "1025246402551-iki3ee0uvfqqad8hj3nn9omotchlg549.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE-rzeVOyIvMr2yhEAaxdx2YMVufFtXDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1025246402551-iki3ee0uvfqqad8hj3nn9omotchlg549.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1025246402551-2q54i1krefd4m530pn48itkea4h3q2s1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biddy"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

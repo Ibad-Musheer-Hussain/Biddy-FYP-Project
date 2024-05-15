@@ -1,0 +1,98 @@
+// ignore_for_file: library_private_types_in_public_api, avoid_print, prefer_const_constructors
+
+import 'dart:io';
+import 'package:flutter/material.dart';
+//import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+//import 'package:tflite/tflite.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:image/image.dart' as img; // For image preprocessing
+
+class MyModelInference extends StatefulWidget {
+  const MyModelInference({super.key});
+
+  @override
+  _MyModelInferenceState createState() => _MyModelInferenceState();
+}
+
+class _MyModelInferenceState extends State<MyModelInference> {
+  Interpreter? interpreter;
+
+  @override
+  void initState() {
+    super.initState();
+    loadModel();
+  }
+
+  Future<void> loadModel() async {
+    try {
+      interpreter = await Interpreter.fromAsset('lib/images/model.tflite');
+    } catch (e) {
+      print('Failed to load model: $e');
+    }
+  }
+
+  Future<List<double>> preprocessImage(File imageFile) async {
+    // Decode image
+    img.Image? image = img.decodeImage(imageFile.readAsBytesSync());
+    // Check if the image is valid
+    if (image == null) {
+      throw Exception('Failed to decode image');
+    }
+    // Resize image to 224x224
+    image = img.copyResize(image, width: 223, height: 223);
+
+    // Normalize pixel values to range [0, 1] and flatten the tensor
+    List<double> flattenedInputTensor = [];
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        int pixel = image.getPixel(x, y);
+        flattenedInputTensor.add(img.getRed(pixel) / 255.0);
+        flattenedInputTensor.add(img.getGreen(pixel) / 255.0);
+        flattenedInputTensor.add(img.getBlue(pixel) / 255.0);
+      }
+    }
+
+    return flattenedInputTensor;
+  }
+
+  Future<String> runInference(File imageFile) async {
+    if (interpreter == null) return 'Model not loaded';
+    var input = await preprocessImage(imageFile);
+    var output = List.filled(4, 0); // Adjust based on your model's output
+
+    interpreter!.run(input, output);
+    // Postprocess the output
+    var result = output[0];
+    if (result > 0.5) {
+      return 'Damage';
+    } else {
+      return 'Whole';
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+      var result = await runInference(imageFile);
+      print('Prediction: $result');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Model Inference'),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: _pickImage,
+          child: Text('Pick Image'),
+        ),
+      ),
+    );
+  }
+}

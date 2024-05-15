@@ -1,0 +1,107 @@
+Future<void> updateCarPrice_GPT(String adId, int Price) async {
+    try {
+      DocumentReference adRefFirestore =
+          FirebaseFirestore.instance // Get the document reference for Firestore
+              .collection('Ads')
+              .doc('Cars')
+              .collection('Sedan')
+              .doc(adId);
+
+      // Get the document reference for the Realtime Database
+      DatabaseReference adRefRealtime = FirebaseDatabase.instance
+          .reference()
+          .child('adsCollection')
+          .child('Cars')
+          .child('Sedan')
+          .child(adId);
+
+      // Get the latest data before the transaction from Firestore
+      DocumentSnapshot adSnapshotBefore = await adRefFirestore.get();
+      int priceBefore = adSnapshotBefore.exists
+          ? (adSnapshotBefore.data() != null
+              ? (adSnapshotBefore.data()! as Map<String, dynamic>)['price'] ?? 0
+              : 0)
+          : 0;
+      print('Price before transaction (Firestore): $priceBefore');
+
+      // Get the latest data before the transaction from the Realtime Database
+      DataSnapshot adSnapshotBeforeRealtime =
+          await adRefRealtime.once().then((snapshot) => snapshot.snapshot);
+
+      int priceBeforeRealtime = 0; // Default value
+      int priceAfterRealtime = 0;
+      int price = 0;
+
+      // Check if the value is a map with dynamic keys
+      if (adSnapshotBeforeRealtime.value is Map<dynamic, dynamic>) {
+        // Cast the value to a map with dynamic keys
+        Map<dynamic, dynamic>? data =
+            adSnapshotBeforeRealtime.value as Map<dynamic, dynamic>?;
+
+        // Check if the 'price' key exists and is an integer
+        if (data != null && data.containsKey('price') && data['price'] is int) {
+          priceBeforeRealtime = data['price'] as int;
+
+          price = priceBeforeRealtime + 500;
+        }
+      }
+      print(
+          'Price before transaction (Realtime Database): $priceBeforeRealtime');
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        DocumentSnapshot adSnapshot = await transaction
+            .get(adRefFirestore); // Get the latest data from Firestore
+
+        if (adSnapshot
+                .exists && // Check if the snapshot exists and contains data
+            adSnapshot.data() != null &&
+            (adSnapshot.data() as Map<String, dynamic>)['isUpdatingPrice'] ==
+                true) {
+          throw 'Another user is currently updating the price. Please try again later.';
+        }
+
+        await transaction.update(adRefFirestore, {
+          // Update the 'isUpdatingPrice' field to prevent concurrent updates in Firestore
+          'isUpdatingPrice': true
+        });
+
+        await transaction.update(
+            adRefFirestore, // Perform the price update in Firestore
+            {'price': price});
+
+        await transaction.update(adRefFirestore, {
+          // Set 'isUpdatingPrice' back to false to allow other updates in Firestore
+          'isUpdatingPrice': false
+        });
+      });
+
+      await adRefRealtime.update(// Update the price in the Realtime Database
+          {'price': price});
+
+      DocumentSnapshot adSnapshotAfter = await adRefFirestore
+          .get(); // Get the latest data after the transaction from Firestore
+      int priceAfter = adSnapshotAfter.exists
+          ? (adSnapshotAfter.data() != null
+              ? (adSnapshotAfter.data()! as Map<String, dynamic>)['price'] ?? 0
+              : 0)
+          : 0;
+      print('Price after transaction (Firestore): $priceAfter');
+
+      DataSnapshot
+          adSnapshotAfterRealtime = // Get the latest data after the transaction from the Realtime Database
+          await adRefRealtime.once().then((snapshot) => snapshot.snapshot);
+      if (adSnapshotAfterRealtime.value is Map<dynamic, dynamic>) {
+        Map<dynamic, dynamic>? data = adSnapshotAfterRealtime.value as Map<
+            dynamic, dynamic>?; // Cast the value to a map with dynamic keys
+
+        if (data != null && data.containsKey('price') && data['price'] is int) {
+          // Check if the 'price' key exists and is an integer
+          priceAfterRealtime = data['price'] as int;
+        }
+      }
+      print('Price after transaction (Realtime Database): $priceAfterRealtime');
+    } catch (error) {
+      print(
+          'Error updating car price: $error'); // Handle error, notify the user, etc.
+    }
+  }
