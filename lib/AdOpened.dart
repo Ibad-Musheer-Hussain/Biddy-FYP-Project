@@ -55,7 +55,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
         .child('price')
         .onValue
         .listen((event) {
-      if (flag < 1) {
+      if (flag > 0) {
         print("value changed"); // change to snackbar later //neccessary
       }
       flag++;
@@ -213,9 +213,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
     Map<String, dynamic>? arguments =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     Product products = arguments['product'] as Product;
-    DateTime currentTime = DateTime.now();
     _remainingTime = DateTime.fromMillisecondsSinceEpoch(products.timestamp2)
-        .difference(currentTime);
+        .difference(DateTime.now());
     int totalSeconds = _remainingTime.inSeconds;
     int days = totalSeconds ~/ (3600 * 24);
     int hours = (totalSeconds % (3600 * 24)) ~/ 3600;
@@ -377,12 +376,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Text(
-                    '${price}',
+                    '$price',
                     style: TextStyle(fontSize: 24),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(0.0),
                   child: ExpansionTile(
                     initiallyExpanded: true,
                     title: Text(
@@ -401,7 +400,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(0.0),
                   child: ExpansionTile(
                     initiallyExpanded: true,
                     title: const Text(
@@ -425,28 +424,28 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text(products.brand),
                                   ),
                                 ),
                               ],
                             ),
-                            const TableRow(
+                            TableRow(
                               children: [
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Year'),
+                                    child: Text("Price"),
                                   ),
                                 ),
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text('${products.price}'),
                                   ),
                                 ),
                               ],
                             ),
-                            const TableRow(
+                            TableRow(
                               children: [
                                 TableCell(
                                   child: Padding(
@@ -457,12 +456,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text(products.model),
                                   ),
                                 ),
                               ],
                             ),
-                            const TableRow(
+                            TableRow(
                               children: [
                                 TableCell(
                                   child: Padding(
@@ -473,12 +472,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text(products.fuel),
                                   ),
                                 ),
                               ],
                             ),
-                            const TableRow(
+                            TableRow(
                               children: [
                                 TableCell(
                                   child: Padding(
@@ -489,12 +488,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text('${products.kms}'),
                                   ),
                                 ),
                               ],
                             ),
-                            const TableRow(
+                            TableRow(
                               children: [
                                 TableCell(
                                   child: Padding(
@@ -505,12 +504,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text(products.transmission),
                                   ),
                                 ),
                               ],
                             ),
-                            const TableRow(
+                            TableRow(
                               children: [
                                 TableCell(
                                   child: Padding(
@@ -521,7 +520,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 TableCell(
                                   child: Padding(
                                     padding: EdgeInsets.all(8.0),
-                                    child: Text('Column 2'),
+                                    child: Text(products.city),
                                   ),
                                 ),
                               ],
@@ -535,7 +534,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0, vertical: 18),
+                      horizontal: 16.0, vertical: 18),
                   child: Text(
                     "Related Products",
                     style: TextStyle(fontSize: 24),
@@ -592,6 +591,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
                               title: document['title'],
                               id: document['id'],
                               price: document['price'],
+                              kms: document['kms'],
+                              city: document['city'],
+                              transmission: document['transmission'],
+                              fuel: "asd", //document['fuel'],
                               description: 'change',
                               collectionValue: document['collectionValue'],
                               timestamp: document['timestamp'],
@@ -600,6 +603,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                             );
                             return GestureDetector(
                               onTap: () {
+                                flag = 0;
                                 Navigator.pushNamed(context, '/itemScreen',
                                     arguments: {
                                       'product': product,

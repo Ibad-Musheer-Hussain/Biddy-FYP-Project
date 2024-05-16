@@ -219,7 +219,7 @@ class _Continue extends State<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      height: 220,
+                      height: 230,
                       child: Stack(
                         children: [
                           AnimatedPositioned(
@@ -293,7 +293,7 @@ class _Continue extends State<LoginPage> {
                                     padding: const EdgeInsets.only(right: 40.0),
                                     child: Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         IconButton(
                                           onPressed: () {
@@ -305,7 +305,6 @@ class _Continue extends State<LoginPage> {
                                           icon: Icon(Icons.arrow_back),
                                           color: Colors.black,
                                         ),
-                                        //Spacer(),
                                         Text(
                                           _showLogin ? "Login" : "Signup",
                                           style: TextStyle(
@@ -314,7 +313,7 @@ class _Continue extends State<LoginPage> {
                                             color: Colors.black,
                                           ),
                                         ),
-                                        //Spacer(),
+                                        Container(), // For space between dont remove
                                       ],
                                     ),
                                   ),
@@ -377,7 +376,7 @@ class _Continue extends State<LoginPage> {
                       height: 15,
                     ),
                     Divider(
-                      thickness: 1, // Adjust thickness as needed
+                      thickness: 2, // Adjust thickness as needed
                       color: Colors.white, // Set color according to your design
                     ),
                     SizedBox(

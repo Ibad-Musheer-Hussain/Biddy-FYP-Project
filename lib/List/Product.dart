@@ -7,7 +7,11 @@ class Product {
   final String id;
   final String collectionValue;
   final String description;
+  final String fuel;
+  final String transmission;
+  final String city;
   int year;
+  int kms;
   int price;
   int timestamp;
   int timestamp2;
@@ -19,9 +23,13 @@ class Product {
       required this.title,
       required this.id,
       required this.price,
+      required this.kms,
+      required this.city,
+      required this.transmission,
       required this.collectionValue,
       required this.timestamp,
       required this.description,
+      required this.fuel,
       required this.timestamp2,
       required this.uploadedImageUrls});
 
@@ -40,6 +48,10 @@ class Product {
         title: castedData['title'],
         uploadedImageUrls: uploadedImageUrls,
         id: castedData['id'],
+        fuel: castedData['fuel'],
+        city: castedData['city'],
+        transmission: castedData['transmission'],
+        kms: castedData['kms'],
         collectionValue: castedData['collectionValue'],
         timestamp: castedData['timestamp'],
         description: castedData['description'],
@@ -56,6 +68,10 @@ List<Product> Sedans = [
       uploadedImageUrls: [],
       title: '',
       id: " ",
+      fuel: '',
+      city: "Karachi",
+      transmission: "Automatic",
+      kms: 123,
       timestamp: 123,
       timestamp2: 123,
       collectionValue: '',
@@ -70,6 +86,10 @@ List<Product> PowerTools = [
       year: 49,
       uploadedImageUrls: [],
       title: '',
+      fuel: '',
+      city: "Karachi",
+      transmission: "Automatic",
+      kms: 123,
       timestamp: 123,
       timestamp2: 123,
       description: '',

@@ -2,6 +2,7 @@
 
 import 'package:biddy/List/Product.dart';
 import 'package:biddy/List/Types.dart';
+// ignore: unused_import
 import 'package:biddy/components/CustomDrawer.dart';
 import 'package:biddy/functions/animateStart.dart';
 import 'package:biddy/functions/signOut.dart';
@@ -55,6 +56,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   List<bool> expandedList = [false];
   double containerWidth = 60.0;
   bool isExpanded = false;
+  int time_in_milliseconds = DateTime.now().millisecondsSinceEpoch;
 
   @override
   void initState() {
@@ -177,14 +179,13 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           Product product =
               Product.fromMap(subDocSnapshot.data() as Map<String, dynamic>);
           print(product);
-          products.add(product);
+          if (product.timestamp2 > time_in_milliseconds) products.add(product);
         }
-
         // Now, 'products' contains all the documents in the subcollection.
+
         // ignore: unused_local_variable
         for (Product product in products) {
           print(products);
-          // Add more fields as needed.
         }
         animateStart(index, previousIndex, selectedIndex, _controller);
         setState(() {
@@ -263,7 +264,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                     _searchQuery = value.toLowerCase();
                   });
                 },
-                hintStyle: MaterialStateProperty.all(
+                hintStyle: WidgetStateProperty.all(
                   const TextStyle(
                     color: Colors.grey,
                     fontSize: 16.0,
@@ -320,10 +321,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                         },
                         child: Container(
                           margin: EdgeInsets.only(right: 8.0, left: 4),
-                          decoration: BoxDecoration(
-                              color: Color.fromARGB(255, 255, 149, 163),
-                              borderRadius: BorderRadius.circular(15)),
-                          height: 30,
+                          height: 20,
                           child: Center(
                             child: Padding(
                               padding:
@@ -642,7 +640,11 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                       year: document['year'],
                                       title: document['title'],
                                       id: document['id'],
+                                      fuel: document['fuel'],
                                       price: document['price'],
+                                      kms: document['kms'],
+                                      city: document['city'],
+                                      transmission: document['transmission'],
                                       collectionValue:
                                           document['collectionValue'],
                                       description: 'change',
@@ -769,12 +771,11 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
             BottomNavigationBarItem(icon: Icon(Icons.add), label: "Create"),
             BottomNavigationBarItem(
                 icon: Icon(Icons.notifications), label: "Notification"),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.settings), label: "Settings"),
+            BottomNavigationBarItem(icon: Icon(Icons.logout), label: "Log Out"),
           ],
         ),
       ),
-      drawer: CustomDrawer(),
+      //drawer: CustomDrawer(),
     );
   }
 }

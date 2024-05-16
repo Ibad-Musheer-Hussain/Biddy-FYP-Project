@@ -410,6 +410,23 @@ class _CreateAdState extends State<CreateAd> {
                                     child: Padding(
                                       padding: EdgeInsets.all(8.0),
                                       child: Image.file(
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Container(
+                                              width: 150,
+                                              height: 200,
+                                              color: Colors.red,
+                                              child: Center(
+                                                child: Text(
+                                                  'Error loading image. Please try again',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ));
+                                        },
                                         _images[index],
                                         width: 150,
                                         height: 200,

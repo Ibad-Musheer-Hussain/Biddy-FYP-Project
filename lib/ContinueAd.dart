@@ -25,9 +25,11 @@ class _ContinueAdState extends State<ContinueAd> {
   final TextEditingController Year = TextEditingController();
   final TextEditingController model = TextEditingController();
   final TextEditingController price = TextEditingController();
-  final TextEditingController km = TextEditingController();
-  final TextEditingController loc = TextEditingController();
+  final TextEditingController kms = TextEditingController();
+  final TextEditingController city = TextEditingController();
   final TextEditingController description = TextEditingController();
+  final TextEditingController transmission = TextEditingController();
+  final TextEditingController fuel = TextEditingController();
   int selectedDays = 3;
   String titleURL = '';
   List<String> pictureUrls = [];
@@ -74,7 +76,6 @@ class _ContinueAdState extends State<ContinueAd> {
       pictureUrls = adData.pictureUrls;
       print('Title URL: ${adData.titleURL}');
       print('Picture URLs: ${adData.pictureUrls}');
-      // Perform other tasks with the data
     } catch (error) {
       print('Error: $error');
     }
@@ -107,8 +108,12 @@ class _ContinueAdState extends State<ContinueAd> {
         'model': model.text.toString(),
         'year': int.tryParse(Year.text.toString()),
         'price': int.tryParse(price.text.toString()),
+        'kms': int.tryParse(kms.text.toString()),
+        'transmission': transmission.text.toString(),
         'pics': pictureUrls,
+        'city': city.text.toString(),
         'id': documentId,
+        'fuel': fuel.text.toString(),
         'description': description.text.toString(),
         'collectionValue': CollectionValue,
         'timestamp': timestampMillis, // Use Timestamp object
@@ -311,8 +316,18 @@ class _ContinueAdState extends State<ContinueAd> {
                               obscureText: false,
                             ),
                             NumberField(
-                              textEditingController: km,
+                              textEditingController: kms,
                               hintText: "KMs Driven",
+                              obscureText: false,
+                            ),
+                            LoginTextField(
+                              textEditingController: transmission,
+                              hintText: "Transmission",
+                              obscureText: false,
+                            ),
+                            LoginTextField(
+                              textEditingController: fuel,
+                              hintText: "Fuel",
                               obscureText: false,
                             ),
                             NumberField(
@@ -321,7 +336,7 @@ class _ContinueAdState extends State<ContinueAd> {
                               obscureText: false,
                             ),
                             LoginTextField(
-                              textEditingController: loc,
+                              textEditingController: city,
                               hintText: "City",
                               obscureText: false,
                             ),
