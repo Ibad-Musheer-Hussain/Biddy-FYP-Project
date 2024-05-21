@@ -5,6 +5,8 @@ class Product {
   final List<String> uploadedImageUrls;
   final String title;
   final String id;
+  final String creatorID;
+  final String winningid;
   final String collectionValue;
   final String description;
   final String fuel;
@@ -24,7 +26,9 @@ class Product {
       required this.id,
       required this.price,
       required this.kms,
+      required this.creatorID,
       required this.city,
+      required this.winningid,
       required this.transmission,
       required this.collectionValue,
       required this.timestamp,
@@ -49,6 +53,8 @@ class Product {
         uploadedImageUrls: uploadedImageUrls,
         id: castedData['id'],
         fuel: castedData['fuel'],
+        winningid: castedData['winningid'],
+        creatorID: castedData['creatorID'],
         city: castedData['city'],
         transmission: castedData['transmission'],
         kms: castedData['kms'],
@@ -69,6 +75,8 @@ List<Product> Sedans = [
       title: '',
       id: " ",
       fuel: '',
+      creatorID: '',
+      winningid: '',
       city: "Karachi",
       transmission: "Automatic",
       kms: 123,
@@ -89,7 +97,9 @@ List<Product> PowerTools = [
       fuel: '',
       city: "Karachi",
       transmission: "Automatic",
+      creatorID: '',
       kms: 123,
+      winningid: '',
       timestamp: 123,
       timestamp2: 123,
       description: '',

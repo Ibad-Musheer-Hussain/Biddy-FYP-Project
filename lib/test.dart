@@ -1,77 +1,200 @@
-// ignore_for_file: library_private_types_in_public_api, prefer_const_constructors
-
-import 'dart:async';
+import 'package:biddy/List/Product.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:shimmer/shimmer.dart';
 
-class MyApp2 extends StatefulWidget {
-  const MyApp2({super.key});
+class FavouritesPage extends StatefulWidget {
+  FavouritesPage();
 
   @override
-  _MyAppState createState() => _MyAppState();
+  _FavouritesPageState createState() => _FavouritesPageState();
 }
 
-class _MyAppState extends State<MyApp2> {
-  late Timer _timer;
-  int _secondsRemaining = 12000000;
+class _FavouritesPageState extends State<FavouritesPage> {
+  List<dynamic> favourites = [];
+  final String userID = "YPTNxEUcRbW4frgs5OkIcbEUjO73";
 
   @override
   void initState() {
     super.initState();
-
-    // Start the countdown timer
-    _startTimer();
+    fetchFavourites();
   }
 
-  void _startTimer() {
-    const oneSec = Duration(seconds: 1);
-    _timer = Timer.periodic(
-      oneSec,
-      (Timer timer) {
-        if (_secondsRemaining == 0) {
-          // Countdown is complete, stop the timer
-          timer.cancel();
-        } else {
-          // Update the countdown timer
-          setState(() {
-            _secondsRemaining--;
-          });
-        }
-      },
-    );
+  Stream<List<QuerySnapshot>> mergeStreams() {
+    // Create a list of streams from each collection
+    List<Stream<QuerySnapshot>> streams = [
+      _motorbikesCollection.snapshots(),
+      _sedansCollection.snapshots(),
+      _suvsCollection.snapshots(),
+    ];
+
+    // Merge all streams into a single stream
+    return CombineLatestStream.list(streams);
   }
 
-  @override
-  void dispose() {
-    _timer.cancel(); // Cancel the timer to avoid memory leaks
-    super.dispose();
+  final CollectionReference _motorbikesCollection = FirebaseFirestore.instance
+      .collection('Ads')
+      .doc('Cars')
+      .collection('Motorbikes');
+  final CollectionReference _sedansCollection = FirebaseFirestore.instance
+      .collection('Ads')
+      .doc('Cars')
+      .collection('Sedans');
+  final CollectionReference _suvsCollection = FirebaseFirestore.instance
+      .collection('Ads')
+      .doc('Cars')
+      .collection('SUVs');
+
+  Future<void> fetchFavourites() async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userID)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          favourites = userDoc.get('favourites') ?? [];
+        });
+      }
+    } catch (e) {
+      print("Error fetching favourites: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Format the remaining time as HH:MM:SS
-    // Calculate days, hours, minutes, and seconds
-    int days = _secondsRemaining ~/ (3600 * 24);
-    int hours = (_secondsRemaining % (3600 * 24)) ~/ 3600;
-    int minutes = (_secondsRemaining % 3600) ~/ 60;
-    int seconds = _secondsRemaining % 60;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Favourites'),
+      ),
+      body: StreamBuilder<List<QuerySnapshot>>(
+        stream: mergeStreams(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return Center(child: CircularProgressIndicator());
+          }
 
-    // Format the remaining time as DD:HH:MM:SS
-    String formattedTime = '${days.toString().padLeft(2, '0')}:'
-        '${hours.toString().padLeft(2, '0')}:'
-        '${minutes.toString().padLeft(2, '0')}:'
-        '${seconds.toString().padLeft(2, '0')}';
+          List<DocumentSnapshot> allSnapshots = [];
+          for (var snapList in snapshot.data!) {
+            allSnapshots.addAll(snapList.docs);
+          }
+          // Filter documents based on favourites and search query
+          final filteredDocs = allSnapshots.where((doc) {
+            final docId = doc['id'];
+            // Filter by favourites
+            final isFavourite = favourites.contains(docId);
+            return isFavourite;
+          }).toList();
 
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Countdown Timer Example'),
-        ),
-        body: Center(
-          child: Text(
-            formattedTime,
-            style: TextStyle(fontSize: 24.0),
-          ),
-        ),
+          if (filteredDocs.isEmpty) {
+            return Center(
+              child: Text('You have no favorites'),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: filteredDocs.length,
+            itemBuilder: (context, index) {
+              final DocumentSnapshot document = filteredDocs[index];
+              final List<dynamic> picsDynamic = document['pics'] ?? [];
+              final List<String> uploadedImageUrls2 =
+                  picsDynamic.map((pic) => pic.toString()).toList();
+              Product product = Product(
+                brand: document['brand'],
+                model: document['model'],
+                year: document['year'],
+                title: document['title'],
+                id: document['id'],
+                fuel: document['fuel'],
+                price: document['price'],
+                kms: document['kms'],
+                city: document['city'],
+                creatorID: document['creatorID'],
+                transmission: document['transmission'],
+                winningid: document['winningid'],
+                collectionValue: document['collectionValue'],
+                description: 'change',
+                timestamp: document['timestamp'],
+                timestamp2: document['timestamp2'],
+                uploadedImageUrls: uploadedImageUrls2,
+              );
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/itemScreen', arguments: {
+                    'product': product,
+                    'id': product.id,
+                  });
+                },
+                child: Card.filled(
+                  color: Colors.transparent,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          height: 270,
+                          width: 430,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.network(
+                                product.title,
+                                width: 300,
+                                fit: BoxFit.fill,
+                                frameBuilder: (BuildContext context,
+                                    Widget child,
+                                    int? frame,
+                                    bool wasSynchronouslyLoaded) {
+                                  if (frame != null) {
+                                    return child; // Return the image if frame is not null (indicating loaded)
+                                  } else {
+                                    return Shimmer.fromColors(
+                                      baseColor: Colors.grey[300]!,
+                                      highlightColor: Colors.grey[100]!,
+                                      child: Container(color: Colors.white),
+                                    ); // Show shimmer effect while the image is loading
+                                  }
+                                },
+                                loadingBuilder: (BuildContext context,
+                                    Widget child,
+                                    ImageChunkEvent? loadingProgress) {
+                                  if (loadingProgress == null) {
+                                    return child; // Return the image if loading is complete
+                                  } else {
+                                    return child; // Return the image with loading progress if it's still loading
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0, vertical: 8),
+                        child: Text(
+                          product.model,
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0, vertical: 8),
+                        child: Text(
+                          '${product.price}',
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

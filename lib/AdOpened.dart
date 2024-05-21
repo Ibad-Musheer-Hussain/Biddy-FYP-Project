@@ -2,6 +2,8 @@
 
 import 'dart:async';
 import 'package:biddy/List/Product.dart';
+// ignore: unused_import
+import 'package:biddy/MainScreen.dart';
 import 'package:biddy/Signing.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -22,9 +24,12 @@ class ItemsScreen extends StatefulWidget {
 class _ItemsScreenState extends State<ItemsScreen> {
   int flag = 0; //for snackbar displaying that price has been updated
   int price = 0;
+  bool isFavorite = false;
   String address = '';
+  bool timerIsNegative = false;
   late Timer _timer;
   Duration _remainingTime = const Duration();
+  late String role;
   final User? auth = FirebaseAuth.instance.currentUser;
   final CollectionReference _motorbikesCollection = FirebaseFirestore.instance
       .collection('Ads')
@@ -46,6 +51,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     address = arguments['id'] as String;
     Product products = arguments['product'] as Product;
+    isProductInFavorites(products.id, auth?.uid);
+    login();
     FirebaseDatabase.instance
         .reference()
         .child('adsCollection')
@@ -56,7 +63,19 @@ class _ItemsScreenState extends State<ItemsScreen> {
         .onValue
         .listen((event) {
       if (flag > 0) {
-        print("value changed"); // change to snackbar later //neccessary
+        print("value changed");
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'The Price has been updated',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.pink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          duration: Duration(seconds: 4), // SnackBar duration
+        ));
       }
       flag++;
       if (event.snapshot.value != null) {
@@ -68,26 +87,46 @@ class _ItemsScreenState extends State<ItemsScreen> {
     });
   }
 
-  Future<void> updateCarPrice(
-      String adId, int Price, String collectionaddress) async {
+  void login() async {
+    //can be used for getting first name of user
     try {
-      DocumentReference adRefFirestore =
-          FirebaseFirestore.instance // Get the document reference for Firestore
-              .collection('Ads')
-              .doc('Cars')
-              .collection(collectionaddress)
-              .doc(adId);
+      final User? user = FirebaseAuth.instance.currentUser;
 
-      DatabaseReference adRefRealtime = FirebaseDatabase
-          .instance // Get the document reference for the Realtime Database
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user?.uid)
+          .get()
+          .then((DocumentSnapshot<Map<String, dynamic>> documentSnapshot) {
+        if (documentSnapshot.exists) {
+          Map<String, dynamic> data =
+              documentSnapshot.data() as Map<String, dynamic>;
+          print(data);
+        }
+      }).catchError((error) {
+        print('Error getting login document: $error');
+      });
+    } catch (e) {
+      print('Firestore login error: $e');
+    }
+  }
+
+  Future<void> updateCarPrice(
+      String adId, int price, String collectionAddress, User user) async {
+    try {
+      DocumentReference adRefFirestore = FirebaseFirestore.instance
+          .collection('Ads')
+          .doc('Cars')
+          .collection(collectionAddress)
+          .doc(adId);
+
+      DatabaseReference adRefRealtime = FirebaseDatabase.instance
           .reference()
           .child('adsCollection')
           .child('Cars')
-          .child(collectionaddress)
+          .child(collectionAddress)
           .child(adId);
 
-      DocumentSnapshot adSnapshotBefore = await adRefFirestore
-          .get(); // Get the latest data before the transaction from Firestore
+      DocumentSnapshot adSnapshotBefore = await adRefFirestore.get();
       int priceBefore = adSnapshotBefore.exists
           ? (adSnapshotBefore.data() != null
               ? (adSnapshotBefore.data()! as Map<String, dynamic>)['price'] ?? 0
@@ -95,35 +134,23 @@ class _ItemsScreenState extends State<ItemsScreen> {
           : 0;
       print('Price before transaction (Firestore): $priceBefore');
 
-      // Get the latest data before the transaction from the Realtime Database
       DataSnapshot adSnapshotBeforeRealtime =
           await adRefRealtime.once().then((snapshot) => snapshot.snapshot);
 
-      int priceBeforeRealtime = 0; // Default value
-      int priceAfterRealtime = 0;
-      int price = 0;
-
-      // Check if the value is a map with dynamic keys
+      int priceBeforeRealtime = 0;
       if (adSnapshotBeforeRealtime.value is Map<dynamic, dynamic>) {
-        // Cast the value to a map with dynamic keys
         Map<dynamic, dynamic>? data =
             adSnapshotBeforeRealtime.value as Map<dynamic, dynamic>?;
-
-        // Check if the 'price' key exists and is an integer
         if (data != null && data.containsKey('price') && data['price'] is int) {
           priceBeforeRealtime = data['price'] as int;
-          price = priceBeforeRealtime + 500;
         }
       }
       print(
           'Price before transaction (Realtime Database): $priceBeforeRealtime');
 
       await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentSnapshot adSnapshot = await transaction
-            .get(adRefFirestore); // Get the latest data from Firestore
-
-        if (adSnapshot
-                .exists && // Check if the snapshot exists and contains data
+        DocumentSnapshot adSnapshot = await transaction.get(adRefFirestore);
+        if (adSnapshot.exists &&
             adSnapshot.data() != null &&
             (adSnapshot.data() as Map<String, dynamic>)['isUpdatingPrice'] ==
                 true) {
@@ -131,25 +158,25 @@ class _ItemsScreenState extends State<ItemsScreen> {
         }
 
         await transaction.update(adRefFirestore, {
-          // Update the 'isUpdatingPrice' field to prevent concurrent updates in Firestore
-          'isUpdatingPrice': true
+          'isUpdatingPrice': true,
+        });
+        price = price + 500;
+        await transaction.update(adRefFirestore, {
+          'price': price,
+          'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
         });
 
-        await transaction.update(
-            adRefFirestore, // Perform the price update in Firestore
-            {'price': price});
-
         await transaction.update(adRefFirestore, {
-          'isUpdatingPrice':
-              false // Set 'isUpdatingPrice' back to false to allow other updates in Firestore
+          'isUpdatingPrice': false,
         });
       });
 
-      await adRefRealtime.update(// Update the price in the Realtime Database
-          {'price': price});
+      await adRefRealtime.update({
+        'price': price,
+        'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
+      });
 
-      DocumentSnapshot adSnapshotAfter = await adRefFirestore
-          .get(); // Get the latest data after the transaction from Firestore
+      DocumentSnapshot adSnapshotAfter = await adRefFirestore.get();
       int priceAfter = adSnapshotAfter.exists
           ? (adSnapshotAfter.data() != null
               ? (adSnapshotAfter.data()! as Map<String, dynamic>)['price'] ?? 0
@@ -157,21 +184,19 @@ class _ItemsScreenState extends State<ItemsScreen> {
           : 0;
       print('Price after transaction (Firestore): $priceAfter');
 
-      DataSnapshot
-          adSnapshotAfterRealtime = // Get the latest data after the transaction from the Realtime Database
+      DataSnapshot adSnapshotAfterRealtime =
           await adRefRealtime.once().then((snapshot) => snapshot.snapshot);
+      int priceAfterRealtime = 0;
       if (adSnapshotAfterRealtime.value is Map<dynamic, dynamic>) {
-        Map<dynamic, dynamic>? data = adSnapshotAfterRealtime.value as Map<
-            dynamic, dynamic>?; // Cast the value to a map with dynamic keys
-
+        Map<dynamic, dynamic>? data =
+            adSnapshotAfterRealtime.value as Map<dynamic, dynamic>?;
         if (data != null && data.containsKey('price') && data['price'] is int) {
           priceAfterRealtime = data['price'] as int;
         }
       }
       print('Price after transaction (Realtime Database): $priceAfterRealtime');
     } catch (error) {
-      print(
-          'Error updating car price: $error'); // Handle error, notify the user, etc.
+      print('Error updating car price: $error');
     }
   }
 
@@ -186,6 +211,106 @@ class _ItemsScreenState extends State<ItemsScreen> {
     return CombineLatestStream.list(streams);
   }
 
+  Future<void> removeFromFavorites(String productId, String? userId) async {
+    try {
+      // Get the reference to the user document
+      DocumentReference userRef =
+          FirebaseFirestore.instance.collection('users').doc(userId);
+
+      // Get the current favorites list
+      DocumentSnapshot userSnapshot = await userRef.get();
+
+      // Check if the 'favourites' field exists and contains the product ID
+      if (userSnapshot.exists &&
+          (userSnapshot.data() as Map<String, dynamic>)
+              .containsKey('favourites') &&
+          (userSnapshot.data() as Map<String, dynamic>)['favourites']
+              is List<dynamic>) {
+        List<String> favorites = List<String>.from((userSnapshot.data() as Map<
+            String, dynamic>)['favourites']); // Get the existing favorites list
+
+        // Remove the product ID from the favorites list
+        favorites.remove(productId);
+
+        // Update the user document with the updated favorites list
+        await userRef.update({'favourites': favorites});
+
+        print('Product removed from favorites successfully');
+      }
+    } catch (error) {
+      print('Failed to remove product from favorites: $error');
+    }
+  }
+
+  Future<void> addToFavorites(String productId, String? userId) async {
+    try {
+      // Get the reference to the user document
+      DocumentReference userRef =
+          FirebaseFirestore.instance.collection('users').doc(userId);
+
+      // Get the current favorites list
+      DocumentSnapshot userSnapshot = await userRef.get();
+
+      // Check if the 'favourites' field exists in the document
+      if (userSnapshot.exists &&
+          (userSnapshot.data() as Map<String, dynamic>)
+              .containsKey('favourites') &&
+          (userSnapshot.data() as Map<String, dynamic>)['favourites']
+              is List<dynamic> &&
+          (userSnapshot.data() as Map<String, dynamic>)['favourites']
+              .isNotEmpty) {
+        List<String> favorites = List<String>.from((userSnapshot.data() as Map<
+            String, dynamic>)['favourites']); // Get the existing favorites list
+
+        // Add the new product ID to the favorites list
+        favorites.add(productId);
+
+        // Update the user document with the updated favorites list
+        await userRef.update({'favourites': favorites});
+
+        print('Product added to favorites successfully');
+      } else {
+        // If the 'favourites' field does not exist or is empty, create it with the new product ID
+        await userRef.set({
+          'favourites': [productId]
+        }, SetOptions(merge: true));
+
+        print('Created favorites list and added product successfully');
+      }
+    } catch (error) {
+      print('Failed to add product to favorites: $error');
+    }
+  }
+
+  Future<void> isProductInFavorites(String productId, String? userId) async {
+    try {
+      // Get the reference to the user document
+      DocumentReference userRef =
+          FirebaseFirestore.instance.collection('users').doc(userId);
+
+      // Get the current favorites list
+      DocumentSnapshot userSnapshot = await userRef.get();
+
+      // Check if the 'favourites' field exists and contains the product ID
+      if (userSnapshot.exists &&
+          userSnapshot.data() is Map<String, dynamic> &&
+          (userSnapshot.data() as Map<String, dynamic>)
+              .containsKey('favourites') &&
+          (userSnapshot.data() as Map<String, dynamic>)['favourites']
+              is List<dynamic> &&
+          (userSnapshot.data() as Map<String, dynamic>)['favourites']
+              .contains(productId)) {
+        // Product ID is in favorites
+        isFavorite = true;
+      } else {
+        // Product ID is not in favorites
+        isFavorite = false;
+      }
+    } catch (error) {
+      print('Error checking product in favorites: $error');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -196,7 +321,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
         if (_remainingTime.isNegative) {
-          timer.cancel();
+          timerIsNegative = true;
+          _timer.cancel();
         }
       });
     });
@@ -215,6 +341,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
     Product products = arguments['product'] as Product;
     _remainingTime = DateTime.fromMillisecondsSinceEpoch(products.timestamp2)
         .difference(DateTime.now());
+    if (_remainingTime.isNegative) {
+      timerIsNegative = true;
+    }
     int totalSeconds = _remainingTime.inSeconds;
     int days = totalSeconds ~/ (3600 * 24);
     int hours = (totalSeconds % (3600 * 24)) ~/ 3600;
@@ -249,14 +378,31 @@ class _ItemsScreenState extends State<ItemsScreen> {
                 ),
               ),
             ),
-            IconButton(
-                onPressed: () {
-                  () {};
-                },
-                icon: const Icon(
-                  Icons.favorite,
-                  color: Colors.white,
-                ))
+            isFavorite
+                ? IconButton(
+                    onPressed: () {
+                      setState(() {
+                        isFavorite = !isFavorite;
+                        removeFromFavorites(products.id, auth?.uid);
+                      });
+                    },
+                    icon: Icon(
+                      Icons.favorite,
+                      color: Colors.red,
+                    ),
+                  )
+                : IconButton(
+                    onPressed: () {
+                      setState(() {
+                        isFavorite = !isFavorite;
+                        addToFavorites(products.id, auth?.uid);
+                      });
+                    },
+                    icon: Icon(
+                      Icons.favorite_border,
+                      color: Colors.white,
+                    ),
+                  )
           ],
         ),
       ),
@@ -593,8 +739,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
                               price: document['price'],
                               kms: document['kms'],
                               city: document['city'],
+                              creatorID: document['creatorID'],
+                              winningid: document['winningid'],
                               transmission: document['transmission'],
-                              fuel: "asd", //document['fuel'],
+                              fuel: document['fuel'],
                               description: 'change',
                               collectionValue: document['collectionValue'],
                               timestamp: document['timestamp'],
@@ -705,28 +853,60 @@ class _ItemsScreenState extends State<ItemsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Text(
-                  formattedTime,
-                  style: const TextStyle(fontSize: 24),
-                ),
+                !timerIsNegative
+                    ? Text(
+                        formattedTime,
+                        style: const TextStyle(fontSize: 24),
+                      )
+                    : Text(
+                        "Bid Expired",
+                        style: const TextStyle(fontSize: 24),
+                      ),
                 Container(
                   width: 150,
-                  child: FABcustom(
-                    onTap: () {
-                      bool isUserLoggedin = (auth != null);
-                      if (isUserLoggedin) {
-                        updateCarPrice(
-                            products.id, 12, products.collectionValue);
-                      } else {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                        );
-                      }
-                    },
-                    text: "Bid",
-                  ),
+                  child: !timerIsNegative
+                      ? (products.creatorID != auth?.uid)
+                          ? FABcustom(
+                              onTap: () {
+                                bool isUserLoggedin = (auth != null);
+                                if (isUserLoggedin) {
+                                  updateCarPrice(products.id, products.price,
+                                      products.collectionValue, auth!);
+                                } else {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginPage(),
+                                    ),
+                                  );
+                                }
+                              },
+                              text: "Bid",
+                            )
+                          : FABcustom(
+                              onTap: () {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                    'Sorry, You cannot bid on your ad',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  backgroundColor: Colors.pink,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                  ),
+                                  duration:
+                                      Duration(seconds: 4), // SnackBar duration
+                                ));
+                              },
+                              text: "Restricted",
+                            )
+                      : FABcustom(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                          },
+                          text: "Go back",
+                        ),
                 ),
               ],
             ),

@@ -23,6 +23,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   String role = 'User';
+  bool favoriteclicked = false;
   final CollectionReference _motorbikesCollection = FirebaseFirestore.instance
       .collection('Ads')
       .doc('Cars')
@@ -57,12 +58,14 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   double containerWidth = 60.0;
   bool isExpanded = false;
   int time_in_milliseconds = DateTime.now().millisecondsSinceEpoch;
+  List<dynamic> favourites = [];
 
   @override
   void initState() {
     products = [];
     super.initState();
     login();
+    fetchFavourites();
     readSubcollectionDocuments('Cars/Sedan/', 0);
     _controller = AnimationController(
       vsync: this,
@@ -77,10 +80,13 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
 
     switch (index) {
       case 0:
+        favoriteclicked = false;
         return 'Cars/Sedan/';
       case 1:
-        return 'Cars/SUVs/';
+        favoriteclicked = true;
+        fetchFavourites();
       case 2:
+        favoriteclicked = false;
         print(user);
         print(user?.uid);
         if (user != null) {
@@ -91,11 +97,31 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         }
 
       case 3:
+        favoriteclicked = false;
         return 'Cars/SUVs/';
       case 4:
+        favoriteclicked = false;
         signOut(context);
       default:
         return 'Unknown'; // Handle unknown index
+    }
+  }
+
+  Future<void> fetchFavourites() async {
+    try {
+      print(user?.uid);
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user?.uid)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          favourites = userDoc.get('favourites') ?? [];
+        });
+      }
+    } catch (e) {
+      print("Error fetching favourites: $e");
     }
   }
 
@@ -220,7 +246,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    _selectedTab = 0;
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -437,317 +462,493 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                   ),
                 ),
           Expanded(
-            flex: 1000,
-            child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Stack(
-                  children: <Widget>[
-                    Container(
-                      //Change to expanded if any issues
-                      child: _searchQuery.isEmpty
-                          ? GridView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 1,
-                                mainAxisSpacing: 30.0,
-                              ),
-                              itemCount: products.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                Product data = products[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    print(data);
-                                    Navigator.pushNamed(context, '/itemScreen',
-                                        arguments: {
-                                          'product': data,
-                                          'id': data.id
-                                        });
-                                  },
-                                  child: Card.filled(
-                                    color: Colors.transparent,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(
-                                          height: 10,
+            child: favoriteclicked
+                ? RefreshIndicator(
+                    onRefresh: () => fetchFavourites(),
+                    child: StreamBuilder<List<QuerySnapshot>>(
+                      stream: mergeStreams(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return Center(child: CircularProgressIndicator());
+                        }
+                        List<DocumentSnapshot> allSnapshots = [];
+                        for (var snapList in snapshot.data!) {
+                          allSnapshots.addAll(snapList.docs);
+                        }
+                        // Filter documents based on favourites and search query
+                        final filteredDocs = allSnapshots.where((doc) {
+                          final docId = doc['id'];
+                          // Filter by favourites
+                          final isFavourite = favourites.contains(docId);
+                          return isFavourite;
+                        }).toList();
+
+                        if (filteredDocs.isEmpty) {
+                          return Center(
+                            child: Text('You have no favorites'),
+                          );
+                        }
+
+                        return ListView.builder(
+                          itemCount: filteredDocs.length,
+                          itemBuilder: (context, index) {
+                            final DocumentSnapshot document =
+                                filteredDocs[index];
+                            final List<dynamic> picsDynamic =
+                                document['pics'] ?? [];
+                            final List<String> uploadedImageUrls2 = picsDynamic
+                                .map((pic) => pic.toString())
+                                .toList();
+                            Product product = Product(
+                              brand: document['brand'],
+                              model: document['model'],
+                              year: document['year'],
+                              title: document['title'],
+                              id: document['id'],
+                              fuel: document['fuel'],
+                              price: document['price'],
+                              kms: document['kms'],
+                              city: document['city'],
+                              creatorID: document['creatorID'],
+                              transmission: document['transmission'],
+                              winningid: document['winningid'],
+                              collectionValue: document['collectionValue'],
+                              description: 'change',
+                              timestamp: document['timestamp'],
+                              timestamp2: document['timestamp2'],
+                              uploadedImageUrls: uploadedImageUrls2,
+                            );
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/itemScreen',
+                                    arguments: {
+                                      'product': product,
+                                      'id': product.id,
+                                    });
+                              },
+                              child: Card.filled(
+                                color: Colors.transparent,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Center(
+                                      child: Container(
+                                        height: 270,
+                                        width: 430,
+                                        child: Stack(
+                                          fit: StackFit.expand,
+                                          children: [
+                                            Image.network(
+                                              product.title,
+                                              width: 300,
+                                              fit: BoxFit.fill,
+                                              frameBuilder: (BuildContext
+                                                      context,
+                                                  Widget child,
+                                                  int? frame,
+                                                  bool wasSynchronouslyLoaded) {
+                                                if (frame != null) {
+                                                  return child; // Return the image if frame is not null (indicating loaded)
+                                                } else {
+                                                  return Shimmer.fromColors(
+                                                    baseColor:
+                                                        Colors.grey[300]!,
+                                                    highlightColor:
+                                                        Colors.grey[100]!,
+                                                    child: Container(
+                                                        color: Colors.white),
+                                                  ); // Show shimmer effect while the image is loading
+                                                }
+                                              },
+                                              loadingBuilder:
+                                                  (BuildContext context,
+                                                      Widget child,
+                                                      ImageChunkEvent?
+                                                          loadingProgress) {
+                                                if (loadingProgress == null) {
+                                                  return child; // Return the image if loading is complete
+                                                } else {
+                                                  return child; // Return the image with loading progress if it's still loading
+                                                }
+                                              },
+                                            ),
+                                          ],
                                         ),
-                                        Expanded(
-                                          child: Center(
-                                            child: Container(
-                                              height: 270,
-                                              width: 430,
-                                              child: Stack(
-                                                fit: StackFit.expand,
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8.0, vertical: 8),
+                                      child: Text(
+                                        product.model,
+                                        style: TextStyle(fontSize: 18),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8.0, vertical: 8),
+                                      child: Text(
+                                        '${product.price}',
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  )
+                : Expanded(
+                    flex: 1000,
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Stack(
+                          children: <Widget>[
+                            Container(
+                              child: _searchQuery.isEmpty
+                                  ? RefreshIndicator(
+                                      onRefresh: () =>
+                                          readSubcollectionDocuments(
+                                              address, _selectedTab),
+                                      child: GridView.builder(
+                                        physics: const BouncingScrollPhysics(),
+                                        gridDelegate:
+                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 1,
+                                          mainAxisSpacing: 30.0,
+                                        ),
+                                        itemCount: products.length,
+                                        itemBuilder:
+                                            (BuildContext context, int index) {
+                                          Product data = products[index];
+                                          return GestureDetector(
+                                            onTap: () {
+                                              print(data);
+                                              Navigator.pushNamed(
+                                                  context, '/itemScreen',
+                                                  arguments: {
+                                                    'product': data,
+                                                    'id': data.id
+                                                  });
+                                            },
+                                            child: Card.filled(
+                                              color: Colors.transparent,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8.0), // Adjust the radius as needed
-                                                    child: Image.network(
-                                                      data.title,
-                                                      width: 300,
-                                                      height: 270,
-                                                      fit: BoxFit.fill,
-                                                      frameBuilder: (BuildContext
-                                                              context,
-                                                          Widget child,
-                                                          int? frame,
-                                                          bool
-                                                              wasSynchronouslyLoaded) {
-                                                        if (frame != null) {
-                                                          return child; // Return the image if frame is not null (indicating loaded)
-                                                        } else {
-                                                          return Shimmer
-                                                              .fromColors(
-                                                            baseColor: Colors
-                                                                .grey[300]!,
-                                                            highlightColor:
-                                                                Colors
-                                                                    .grey[100]!,
-                                                            child: Container(
-                                                                color: Colors
-                                                                    .white),
-                                                          ); // Show shimmer effect while the image is loading
-                                                        }
-                                                      },
-                                                      loadingBuilder: (BuildContext
-                                                              context,
-                                                          Widget child,
-                                                          ImageChunkEvent?
-                                                              loadingProgress) {
-                                                        if (loadingProgress ==
-                                                            null) {
-                                                          return child; // Return the image if loading is complete
-                                                        } else {
-                                                          return child; // Return the image with loading progress if it's still loading
-                                                        }
-                                                      },
+                                                  SizedBox(
+                                                    height: 10,
+                                                  ),
+                                                  Expanded(
+                                                    child: Center(
+                                                      child: Container(
+                                                        height: 270,
+                                                        width: 430,
+                                                        child: Stack(
+                                                          fit: StackFit.expand,
+                                                          children: [
+                                                            ClipRRect(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          8.0), // Adjust the radius as needed
+                                                              child:
+                                                                  Image.network(
+                                                                data.title,
+                                                                width: 300,
+                                                                height: 270,
+                                                                fit:
+                                                                    BoxFit.fill,
+                                                                frameBuilder: (BuildContext
+                                                                        context,
+                                                                    Widget
+                                                                        child,
+                                                                    int? frame,
+                                                                    bool
+                                                                        wasSynchronouslyLoaded) {
+                                                                  if (frame !=
+                                                                      null) {
+                                                                    return child; // Return the image if frame is not null (indicating loaded)
+                                                                  } else {
+                                                                    return Shimmer
+                                                                        .fromColors(
+                                                                      baseColor:
+                                                                          Colors
+                                                                              .grey[300]!,
+                                                                      highlightColor:
+                                                                          Colors
+                                                                              .grey[100]!,
+                                                                      child: Container(
+                                                                          color:
+                                                                              Colors.white),
+                                                                    ); // Show shimmer effect while the image is loading
+                                                                  }
+                                                                },
+                                                                loadingBuilder: (BuildContext
+                                                                        context,
+                                                                    Widget
+                                                                        child,
+                                                                    ImageChunkEvent?
+                                                                        loadingProgress) {
+                                                                  if (loadingProgress ==
+                                                                      null) {
+                                                                    return child; // Return the image if loading is complete
+                                                                  } else {
+                                                                    return child; // Return the image with loading progress if it's still loading
+                                                                  }
+                                                                },
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4.0,
+                                                        vertical: 4),
+                                                    child: Text(
+                                                      data.model,
+                                                      style: TextStyle(
+                                                          fontSize: 22,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4.0),
+                                                    child: Text(
+                                                      '${data.price}',
+                                                      style: const TextStyle(
+                                                          fontSize: 18),
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 4.0, vertical: 4),
-                                          child: Text(
-                                            data.model,
-                                            style: TextStyle(
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 4.0),
-                                          child: Text(
-                                            '${data.price}',
-                                            style:
-                                                const TextStyle(fontSize: 18),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            )
-                          : StreamBuilder<List<QuerySnapshot>>(
-                              stream: mergeStreams(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                }
-                                if (snapshot.hasError ||
-                                    snapshot.data == null) {
-                                  return Center(
-                                    child: Text('Error: ${snapshot.error}'),
-                                  );
-                                }
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  : StreamBuilder<List<QuerySnapshot>>(
+                                      stream: mergeStreams(),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        }
+                                        if (snapshot.hasError ||
+                                            snapshot.data == null) {
+                                          return Center(
+                                            child: Text(
+                                                'Error: ${snapshot.error}'),
+                                          );
+                                        }
 
-                                // Merge all snapshots into a single list
-                                List<DocumentSnapshot> allSnapshots = [];
-                                for (var snapList in snapshot.data!) {
-                                  allSnapshots.addAll(snapList.docs);
-                                }
+                                        // Merge all snapshots into a single list
+                                        List<DocumentSnapshot> allSnapshots =
+                                            [];
+                                        for (var snapList in snapshot.data!) {
+                                          allSnapshots.addAll(snapList.docs);
+                                        }
 
-                                // Filter documents based on search query
-                                final filteredDocs = allSnapshots.where((doc) {
-                                  final vehicleName =
-                                      doc['model'].toString().toLowerCase();
-                                  final price = doc['price']
-                                      as int; // Assuming price is stored as an integer
-                                  final year = doc['year']
-                                      as int; // Assuming year is stored as an integer
-                                  final time = doc['timestamp2'];
-                                  final currentTime = storeTimestamp();
-                                  return vehicleName.contains(_searchQuery) &&
-                                      ((priceMin.text.isEmpty ||
-                                              (int.tryParse(priceMin.text.toString()) ??
-                                                      1) <=
-                                                  price) &&
-                                          (priceMax.text.isEmpty ||
-                                              price <=
-                                                  (int.tryParse(priceMax.text.toString()) ??
-                                                      double.infinity))) &&
-                                      ((KMMin.text.isEmpty ||
-                                              (int.tryParse(KMMin.text.toString()) ??
-                                                      1) <=
-                                                  price) &&
-                                          (KMMax.text.isEmpty ||
-                                              price <=
-                                                  (int.tryParse(priceMax.text.toString()) ??
-                                                      double.infinity))) &&
-                                      ((YearMin.text.isEmpty ||
-                                              (int.tryParse(YearMin.text.toString()) ??
-                                                      1) <=
-                                                  year) &&
-                                          time > currentTime &&
-                                          (YearMax.text.isEmpty ||
-                                              year <=
-                                                  (int.tryParse(YearMax.text.toString()) ??
-                                                      double.infinity)));
-                                }).toList();
+                                        // Filter documents based on search query
+                                        final filteredDocs =
+                                            allSnapshots.where((doc) {
+                                          final vehicleName = doc['model']
+                                              .toString()
+                                              .toLowerCase();
+                                          final price = doc['price']
+                                              as int; // Assuming price is stored as an integer
+                                          final year = doc['year']
+                                              as int; // Assuming year is stored as an integer
+                                          final time = doc['timestamp2'];
+                                          final currentTime = storeTimestamp();
+                                          return vehicleName.contains(_searchQuery) &&
+                                              ((priceMin.text.isEmpty ||
+                                                      (int.tryParse(priceMin.text.toString()) ?? 1) <=
+                                                          price) &&
+                                                  (priceMax.text.isEmpty ||
+                                                      price <=
+                                                          (int.tryParse(priceMax.text.toString()) ??
+                                                              double
+                                                                  .infinity))) &&
+                                              ((KMMin.text.isEmpty ||
+                                                      (int.tryParse(KMMin.text.toString()) ?? 1) <=
+                                                          price) &&
+                                                  (KMMax.text.isEmpty ||
+                                                      price <=
+                                                          (int.tryParse(priceMax.text.toString()) ??
+                                                              double
+                                                                  .infinity))) &&
+                                              ((YearMin.text.isEmpty ||
+                                                      (int.tryParse(YearMin.text.toString()) ??
+                                                              1) <=
+                                                          year) &&
+                                                  time > currentTime &&
+                                                  (YearMax.text.isEmpty ||
+                                                      year <= (int.tryParse(YearMax.text.toString()) ?? double.infinity)));
+                                        }).toList();
 
-                                if (filteredDocs.isEmpty) {
-                                  return Center(
-                                    child: Text(
-                                        'No results found. Try changing or resetting the filter settings'),
-                                  );
-                                }
-                                return ListView.builder(
-                                  itemCount: filteredDocs.length,
-                                  itemBuilder: (context, index) {
-                                    final DocumentSnapshot document =
-                                        filteredDocs[index];
-                                    final List<dynamic>
-                                        picsDynamic = //this shit is very imp
-                                        document['pics'] ?? [];
-                                    final List<String> uploadedImageUrls2 =
-                                        picsDynamic
-                                            .map((pic) => pic.toString())
-                                            .toList();
-                                    Product product = Product(
-                                      brand: document['brand'],
-                                      model: document['model'],
-                                      year: document['year'],
-                                      title: document['title'],
-                                      id: document['id'],
-                                      fuel: document['fuel'],
-                                      price: document['price'],
-                                      kms: document['kms'],
-                                      city: document['city'],
-                                      transmission: document['transmission'],
-                                      collectionValue:
-                                          document['collectionValue'],
-                                      description: 'change',
-                                      timestamp: document['timestamp'],
-                                      timestamp2: document['timestamp2'],
-                                      uploadedImageUrls: uploadedImageUrls2,
-                                    );
-                                    return GestureDetector(
-                                      onTap: () {
-                                        Navigator.pushNamed(
-                                            context, '/itemScreen', arguments: {
-                                          'product': product,
-                                          'id': product.id
-                                        });
-                                      },
-                                      child: Card.filled(
-                                        color: Colors.transparent,
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Center(
-                                              child: Container(
-                                                height: 270,
-                                                width: 430,
-                                                child: Stack(
-                                                  fit: StackFit.expand,
+                                        if (filteredDocs.isEmpty) {
+                                          return Center(
+                                            child: Text(
+                                                'No results found. Try changing or resetting the filter settings'),
+                                          );
+                                        }
+                                        return ListView.builder(
+                                          itemCount: filteredDocs.length,
+                                          itemBuilder: (context, index) {
+                                            final DocumentSnapshot document =
+                                                filteredDocs[index];
+                                            final List<dynamic>
+                                                picsDynamic = //this shit is very imp
+                                                document['pics'] ?? [];
+                                            final List<String>
+                                                uploadedImageUrls2 = picsDynamic
+                                                    .map(
+                                                        (pic) => pic.toString())
+                                                    .toList();
+                                            Product product = Product(
+                                              brand: document['brand'],
+                                              model: document['model'],
+                                              year: document['year'],
+                                              title: document['title'],
+                                              id: document['id'],
+                                              fuel: document['fuel'],
+                                              price: document['price'],
+                                              kms: document['kms'],
+                                              city: document['city'],
+                                              creatorID: document['creatorID'],
+                                              transmission:
+                                                  document['transmission'],
+                                              winningid: document['winningid'],
+                                              collectionValue:
+                                                  document['collectionValue'],
+                                              description: 'change',
+                                              timestamp: document['timestamp'],
+                                              timestamp2:
+                                                  document['timestamp2'],
+                                              uploadedImageUrls:
+                                                  uploadedImageUrls2,
+                                            );
+                                            return GestureDetector(
+                                              onTap: () {
+                                                Navigator.pushNamed(
+                                                    context, '/itemScreen',
+                                                    arguments: {
+                                                      'product': product,
+                                                      'id': product.id
+                                                    });
+                                              },
+                                              child: Card.filled(
+                                                color: Colors.transparent,
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Image.network(
-                                                      product.title,
-                                                      width: 300,
-                                                      fit: BoxFit.fill,
-                                                      frameBuilder: (BuildContext
-                                                              context,
-                                                          Widget child,
-                                                          int? frame,
-                                                          bool
-                                                              wasSynchronouslyLoaded) {
-                                                        if (frame != null) {
-                                                          return child; // Return the image if frame is not null (indicating loaded)
-                                                        } else {
-                                                          return Shimmer
-                                                              .fromColors(
-                                                            baseColor: Colors
-                                                                .grey[300]!,
-                                                            highlightColor:
-                                                                Colors
-                                                                    .grey[100]!,
-                                                            child: Container(
-                                                                color: Colors
-                                                                    .white),
-                                                          ); // Show shimmer effect while the image is loading
-                                                        }
-                                                      },
-                                                      loadingBuilder: (BuildContext
-                                                              context,
-                                                          Widget child,
-                                                          ImageChunkEvent?
-                                                              loadingProgress) {
-                                                        if (loadingProgress ==
-                                                            null) {
-                                                          return child; // Return the image if loading is complete
-                                                        } else {
-                                                          return child; // Return the image with loading progress if it's still loading
-                                                        }
-                                                      },
+                                                    Center(
+                                                      child: Container(
+                                                        height: 270,
+                                                        width: 430,
+                                                        child: Stack(
+                                                          fit: StackFit.expand,
+                                                          children: [
+                                                            Image.network(
+                                                              product.title,
+                                                              width: 300,
+                                                              fit: BoxFit.fill,
+                                                              frameBuilder:
+                                                                  (BuildContext
+                                                                          context,
+                                                                      Widget
+                                                                          child,
+                                                                      int?
+                                                                          frame,
+                                                                      bool
+                                                                          wasSynchronouslyLoaded) {
+                                                                if (frame !=
+                                                                    null) {
+                                                                  return child; // Return the image if frame is not null (indicating loaded)
+                                                                } else {
+                                                                  return Shimmer
+                                                                      .fromColors(
+                                                                    baseColor:
+                                                                        Colors.grey[
+                                                                            300]!,
+                                                                    highlightColor:
+                                                                        Colors.grey[
+                                                                            100]!,
+                                                                    child: Container(
+                                                                        color: Colors
+                                                                            .white),
+                                                                  ); // Show shimmer effect while the image is loading
+                                                                }
+                                                              },
+                                                              loadingBuilder:
+                                                                  (BuildContext
+                                                                          context,
+                                                                      Widget
+                                                                          child,
+                                                                      ImageChunkEvent?
+                                                                          loadingProgress) {
+                                                                if (loadingProgress ==
+                                                                    null) {
+                                                                  return child; // Return the image if loading is complete
+                                                                } else {
+                                                                  return child; // Return the image with loading progress if it's still loading
+                                                                }
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 8.0,
+                                                          vertical: 8),
+                                                      child: Text(
+                                                        product.model,
+                                                        style: TextStyle(
+                                                            fontSize: 18),
+                                                      ),
+                                                    ),
+                                                    Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 8.0,
+                                                          vertical: 8),
+                                                      child: Text(
+                                                        '${product.price}',
+                                                        style: const TextStyle(
+                                                            fontSize: 18),
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
                                               ),
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8.0,
-                                                      vertical: 8),
-                                              child: Text(
-                                                product.model,
-                                                style: TextStyle(fontSize: 18),
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8.0,
-                                                      vertical: 8),
-                                              child: Text(
-                                                '${product.price}',
-                                                style: const TextStyle(
-                                                    fontSize: 18),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
                             ),
-                    ),
-                  ],
-                )),
+                          ],
+                        )),
+                  ),
           )
         ],
       ),
@@ -765,12 +966,21 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           backgroundColor:
               Color.fromARGB(255, 255, 149, 163), // Set background color
           items: [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
             BottomNavigationBarItem(
-                icon: Icon(Icons.history), label: "History"),
+                icon: Icon(
+                  Icons.home_outlined,
+                  color: favoriteclicked ? Colors.black : Colors.white,
+                ),
+                label: "Home"),
+            BottomNavigationBarItem(
+                icon: Icon(
+                  Icons.favorite_border_outlined,
+                  color: favoriteclicked ? Colors.white : Colors.black,
+                ),
+                label: "Favorite"),
             BottomNavigationBarItem(icon: Icon(Icons.add), label: "Create"),
             BottomNavigationBarItem(
-                icon: Icon(Icons.notifications), label: "Notification"),
+                icon: Icon(Icons.message_outlined), label: "Chats"),
             BottomNavigationBarItem(icon: Icon(Icons.logout), label: "Log Out"),
           ],
         ),

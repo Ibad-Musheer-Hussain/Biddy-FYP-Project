@@ -40,9 +40,9 @@ class MyApp extends StatelessWidget {
                 Future.value(AdData(titleURL: '', pictureUrls: []))),
         '/itemScreen': (context) => const ItemsScreen()
       },
-      //ADDED CONST EVERYWHERE REMOVE IF APP NOT WORKING PROPERLY
+
       home: MainPage(),
-      //home: MyApp2(),
+      //home: FavPage(),
     );
   }
 }

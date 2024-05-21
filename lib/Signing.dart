@@ -104,9 +104,9 @@ class _Continue extends State<LoginPage> {
 
   void login() async {
     try {
-      //UserCredential userCredential = await auth.signInWithEmailAndPassword(email: "ibadmusheer20@gmail.com", password: "mustufa1");
       UserCredential userCredential = await auth.signInWithEmailAndPassword(
-          email: email.text.toString(), password: pass.text.toString());
+          email: "ibadmusheer2@gmail.com", password: "mustufa1");
+      //UserCredential userCredential = await auth.signInWithEmailAndPassword(email: email.text.toString(), password: pass.text.toString());
       final User? user = userCredential.user;
       print('$user');
       FirebaseFirestore.instance

@@ -113,6 +113,8 @@ class _ContinueAdState extends State<ContinueAd> {
         'pics': pictureUrls,
         'city': city.text.toString(),
         'id': documentId,
+        'winningid': '',
+        'creatorID': auth?.uid,
         'fuel': fuel.text.toString(),
         'description': description.text.toString(),
         'collectionValue': CollectionValue,
