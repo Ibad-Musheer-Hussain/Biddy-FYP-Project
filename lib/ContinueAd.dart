@@ -30,6 +30,7 @@ class _ContinueAdState extends State<ContinueAd> {
   final TextEditingController description = TextEditingController();
   final TextEditingController transmission = TextEditingController();
   final TextEditingController fuel = TextEditingController();
+
   int selectedDays = 3;
   String titleURL = '';
   List<String> pictureUrls = [];
@@ -101,6 +102,12 @@ class _ContinueAdState extends State<ContinueAd> {
       int timestampMillis = storeTimestamp(); // Get timestamp in milliseconds
       int timestamp2 = timestampMillis + (selectedDays * 24 * 60 * 60 * 1000);
 
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(auth?.uid)
+          .get();
+      String? fcmToken = userDoc['fcmToken'];
+      print(fcmToken);
       Map<String, dynamic> data = {
         // Create a map containing the data to be added to Firestore and the Realtime Database
         'title': titleURL,

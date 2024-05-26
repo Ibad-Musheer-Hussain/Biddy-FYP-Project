@@ -12,6 +12,7 @@ class Product {
   final String fuel;
   final String transmission;
   final String city;
+
   int year;
   int kms;
   int price;
@@ -75,6 +76,7 @@ List<Product> Sedans = [
       title: '',
       id: " ",
       fuel: '',
+
       creatorID: '',
       winningid: '',
       city: "Karachi",
@@ -94,6 +96,7 @@ List<Product> PowerTools = [
       year: 49,
       uploadedImageUrls: [],
       title: '',
+
       fuel: '',
       city: "Karachi",
       transmission: "Automatic",

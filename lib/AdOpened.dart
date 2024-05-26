@@ -25,6 +25,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
   int flag = 0; //for snackbar displaying that price has been updated
   int price = 0;
   bool isFavorite = false;
+  late StreamSubscription<DatabaseEvent> _priceSubscription;
+  late DatabaseReference _priceRef;
   String address = '';
   bool timerIsNegative = false;
   late Timer _timer;
@@ -53,29 +55,17 @@ class _ItemsScreenState extends State<ItemsScreen> {
     Product products = arguments['product'] as Product;
     isProductInFavorites(products.id, auth?.uid);
     login();
-    FirebaseDatabase.instance
+    _priceRef = FirebaseDatabase.instance
         .reference()
         .child('adsCollection')
         .child('Cars')
         .child(products.collectionValue)
         .child(address)
-        .child('price')
-        .onValue
-        .listen((event) {
+        .child('price');
+    _priceSubscription = _priceRef.onValue.listen((event) {
       if (flag > 0) {
         print("value changed");
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-            'The Price has been updated',
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: Colors.pink,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          duration: Duration(seconds: 4), // SnackBar duration
-        ));
+//snackbar removed because it is being spammed in chatpage
       }
       flag++;
       if (event.snapshot.value != null) {
@@ -113,6 +103,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
   Future<void> updateCarPrice(
       String adId, int price, String collectionAddress, User user) async {
     try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      String? fcmToken = userDoc['fcmToken'];
+
       DocumentReference adRefFirestore = FirebaseFirestore.instance
           .collection('Ads')
           .doc('Cars')
@@ -162,6 +158,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
         });
         price = price + 500;
         await transaction.update(adRefFirestore, {
+          'winningToken': fcmToken,
           'price': price,
           'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
         });
@@ -172,6 +169,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
       });
 
       await adRefRealtime.update({
+        'winningToken': fcmToken,
         'price': price,
         'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
       });
@@ -194,7 +192,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
           priceAfterRealtime = data['price'] as int;
         }
       }
+
       print('Price after transaction (Realtime Database): $priceAfterRealtime');
+
+      addToHistory(adId, auth!.uid);
     } catch (error) {
       print('Error updating car price: $error');
     }
@@ -282,6 +283,45 @@ class _ItemsScreenState extends State<ItemsScreen> {
     }
   }
 
+  Future<void> addToHistory(String productId, String? userId) async {
+    try {
+      // Get the reference to the user document
+      DocumentReference userRef =
+          FirebaseFirestore.instance.collection('users').doc(userId);
+
+      // Get the current history list
+      DocumentSnapshot userSnapshot = await userRef.get();
+
+      // Check if the 'history' field exists in the document
+      if (userSnapshot.exists &&
+          (userSnapshot.data() as Map<String, dynamic>)
+              .containsKey('history') &&
+          (userSnapshot.data() as Map<String, dynamic>)['history']
+              is List<dynamic> &&
+          (userSnapshot.data() as Map<String, dynamic>)['history'].isNotEmpty) {
+        List<String> history = List<String>.from((userSnapshot.data() as Map<
+            String, dynamic>)['history']); // Get the existing favorites list
+
+        // Add the new product ID to the favorites list
+        history.add(productId);
+
+        // Update the user document with the updated favorites list
+        await userRef.update({'history': history});
+
+        print('Product added to history successfully');
+      } else {
+        // If the 'history' field does not exist or is empty, create it with the new product ID
+        await userRef.set({
+          'history': [productId]
+        }, SetOptions(merge: true));
+
+        print('Created history list and added product successfully');
+      }
+    } catch (error) {
+      print('Failed to add product to history: $error');
+    }
+  }
+
   Future<void> isProductInFavorites(String productId, String? userId) async {
     try {
       // Get the reference to the user document
@@ -317,6 +357,13 @@ class _ItemsScreenState extends State<ItemsScreen> {
     _startCountdown();
   }
 
+  bool isWinner(User user, Product products) {
+    if (user.uid == products.winningid || user.uid == products.creatorID) {
+      return true;
+    } else
+      return false;
+  }
+
   void _startCountdown() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
@@ -330,8 +377,16 @@ class _ItemsScreenState extends State<ItemsScreen> {
 
   @override
   void dispose() {
+    _priceSubscription.cancel();
     _timer.cancel(); // Cancel the timer to avoid memory leaks
     super.dispose();
+  }
+
+  void toChat(Product product) {
+    Navigator.pushNamed(context, '/chatPage', arguments: {
+      'winningID': product.winningid,
+      'creatorID': product.creatorID
+    });
   }
 
   @override
@@ -858,10 +913,15 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         formattedTime,
                         style: const TextStyle(fontSize: 24),
                       )
-                    : Text(
-                        "Bid Expired",
-                        style: const TextStyle(fontSize: 24),
-                      ),
+                    : isWinner(auth!, products)
+                        ? Text(
+                            "You Won!",
+                            style: const TextStyle(fontSize: 24),
+                          )
+                        : Text(
+                            "Bid Expired",
+                            style: const TextStyle(fontSize: 24),
+                          ),
                 Container(
                   width: 150,
                   child: !timerIsNegative
@@ -901,12 +961,19 @@ class _ItemsScreenState extends State<ItemsScreen> {
                               },
                               text: "Restricted",
                             )
-                      : FABcustom(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                          },
-                          text: "Go back",
-                        ),
+                      : isWinner(auth!, products)
+                          ? FABcustom(
+                              onTap: () {
+                                toChat(products);
+                              },
+                              text: "Go to Chat",
+                            )
+                          : FABcustom(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                              },
+                              text: "Go back",
+                            ),
                 ),
               ],
             ),

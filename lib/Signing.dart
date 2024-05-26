@@ -5,6 +5,7 @@ import 'package:biddy/MainScreen.dart';
 import 'package:biddy/components/LoginTextField.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -34,6 +35,7 @@ class _Continue extends State<LoginPage> {
       );
       User? user = auth.currentUser;
 
+      storeToken();
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -70,6 +72,15 @@ class _Continue extends State<LoginPage> {
     }
   }
 
+  void storeToken() async {
+    String? token = await FirebaseMessaging.instance.getToken();
+    String userId = FirebaseAuth.instance.currentUser!.uid;
+
+    await FirebaseFirestore.instance.collection('users').doc(userId).set({
+      'fcmToken': token,
+    }, SetOptions(merge: true));
+  }
+
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
       final GoogleSignInAccount? googleSignInAccount =
@@ -86,6 +97,7 @@ class _Continue extends State<LoginPage> {
         final User? user = userCredential.user;
 
         if (user != null) {
+          storeToken();
           print('Signed in with Google: ${user.displayName}');
           Navigator.push(
             context,
@@ -105,8 +117,7 @@ class _Continue extends State<LoginPage> {
   void login() async {
     try {
       UserCredential userCredential = await auth.signInWithEmailAndPassword(
-          email: "ibadmusheer2@gmail.com", password: "mustufa1");
-      //UserCredential userCredential = await auth.signInWithEmailAndPassword(email: email.text.toString(), password: pass.text.toString());
+          email: email.text.toString(), password: pass.text.toString());
       final User? user = userCredential.user;
       print('$user');
       FirebaseFirestore.instance
@@ -332,15 +343,16 @@ class _Continue extends State<LoginPage> {
                     FABcustom(
                         onTap: () {
                           if (_showLogin) {
+                            print(_showLogin);
                             login();
                           }
                           isEmailRegistered(email);
+                          print(_showLogin);
                           if (_showLogin == false &&
                               _showFirstContainer == false) {
+                            print("register triggered");
                             register();
                           }
-                          print(_showLogin);
-                          print(_showFirstContainer);
                         },
                         text: _showLogin ? "Log in" : "Sign Up"),
                     SizedBox(
