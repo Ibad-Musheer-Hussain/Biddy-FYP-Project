@@ -12,8 +12,7 @@ import 'package:biddy/test.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-//add history option in bottom nav bar
-// log out by tapping avatar
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

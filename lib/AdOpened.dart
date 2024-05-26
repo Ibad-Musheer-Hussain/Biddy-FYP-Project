@@ -37,10 +37,18 @@ class _ItemsScreenState extends State<ItemsScreen> {
       .collection('Ads')
       .doc('Cars')
       .collection('Motorbikes');
+  final CollectionReference _CoupesCollection = FirebaseFirestore.instance
+      .collection('Ads')
+      .doc('Cars')
+      .collection('Coupes');
+  final CollectionReference _HatchbacksCollection = FirebaseFirestore.instance
+      .collection('Ads')
+      .doc('Cars')
+      .collection('Hatchbacks');
   final CollectionReference _sedansCollection = FirebaseFirestore.instance
       .collection('Ads')
       .doc('Cars')
-      .collection('Sedans');
+      .collection('Sedan');
   final CollectionReference _suvsCollection = FirebaseFirestore.instance
       .collection('Ads')
       .doc('Cars')
@@ -205,9 +213,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
     // Create a list of streams from each collection
     List<Stream<QuerySnapshot>> streams = [
       _motorbikesCollection.snapshots(),
+      _CoupesCollection.snapshots(),
+      _HatchbacksCollection.snapshots(),
       _sedansCollection.snapshots(),
       _suvsCollection.snapshots(),
     ];
+
     // Merge all streams into a single stream
     return CombineLatestStream.list(streams);
   }

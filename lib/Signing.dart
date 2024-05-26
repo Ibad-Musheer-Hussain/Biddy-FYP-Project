@@ -25,7 +25,7 @@ class _Continue extends State<LoginPage> {
   List<String> signInMethods = [];
   GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   bool _showFirstContainer = true;
-  bool _showLogin = false;
+  bool _showLogin = true;
   bool registered = false;
   void register() async {
     try {
@@ -145,11 +145,11 @@ class _Continue extends State<LoginPage> {
     }
   }
 
-  Future<bool> isEmailRegistered(TextEditingController mail) async {
+  Future<bool> isEmailRegistered(
+      BuildContext context, TextEditingController mail) async {
+    bool registered = false;
     try {
-      registered = false;
-      String email = mail.text.toString();
-      print(email);
+      String email = mail.text.trim();
       if (email.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -161,49 +161,54 @@ class _Continue extends State<LoginPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
-          duration: Duration(seconds: 2), // SnackBar duration
+          duration: Duration(seconds: 2),
         ));
-        return true;
+        return false; // Email is empty, so registration check is not applicable
       }
+
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: "placeholderPassword", // Use a non-sensitive placeholder
       );
-      setState(() {
-        _showLogin = false;
-        _showFirstContainer = !_showFirstContainer;
-        print("NOT registered"); //Email does not exist
-      });
 
       await FirebaseAuth.instance.currentUser!.delete();
+
+      print("NOT registered"); // Email does not exist
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        setState(() {
-          _showLogin = true;
-          _showFirstContainer = !_showFirstContainer;
-          print("registered");
-          registered = true;
-        }); // Email already exists
-      }
-      if (e.code == 'invalid-email') {
-        setState(() {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-              'Email is invalid',
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.pink,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            duration: Duration(seconds: 2), // SnackBar duration
-          ));
-          _showFirstContainer = true;
-        });
+        print("registered");
+        registered = true; // Email already exists
+      } else if (e.code == 'invalid-email') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'Email is invalid',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.pink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          duration: Duration(seconds: 2),
+        ));
       }
     }
-    return false;
+
+    return registered;
+  }
+
+  void _checkEmailRegistration(BuildContext context) async {
+    bool isRegistered = await isEmailRegistered(context, email);
+
+    setState(() {
+      _showLogin = isRegistered;
+    });
+
+    if (isRegistered) {
+      print("User is already registered");
+    } else {
+      print("User is not registered");
+    }
   }
 
   @override
@@ -345,14 +350,18 @@ class _Continue extends State<LoginPage> {
                           if (_showLogin) {
                             print(_showLogin);
                             login();
+                            pass.clear();
                           }
-                          isEmailRegistered(email);
+                          if (_showFirstContainer) {
+                            _checkEmailRegistration(context);
+                          }
                           print(_showLogin);
                           if (_showLogin == false &&
                               _showFirstContainer == false) {
                             print("register triggered");
                             register();
                           }
+                          _showFirstContainer = !_showFirstContainer;
                         },
                         text: _showLogin ? "Log in" : "Sign Up"),
                     SizedBox(

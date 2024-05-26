@@ -44,7 +44,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   final CollectionReference _sedansCollection = FirebaseFirestore.instance
       .collection('Ads')
       .doc('Cars')
-      .collection('Sedans');
+      .collection('Sedan');
   final CollectionReference _suvsCollection = FirebaseFirestore.instance
       .collection('Ads')
       .doc('Cars')
@@ -569,7 +569,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
 
                             if (filteredDocs.isEmpty) {
                               return Center(
-                                child: Text('You have no favorites'),
+                                child: Text('Your history is empty.'),
                               );
                             }
                             return ListView.builder(
