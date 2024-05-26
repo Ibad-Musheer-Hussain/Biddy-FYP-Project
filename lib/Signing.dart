@@ -363,7 +363,7 @@ class _Continue extends State<LoginPage> {
                           }
                           _showFirstContainer = !_showFirstContainer;
                         },
-                        text: _showLogin ? "Log in" : "Sign Up"),
+                        text: _showLogin ? "Continue" : "Sign Up"),
                     SizedBox(
                       height: 15,
                     ),
