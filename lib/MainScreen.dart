@@ -203,6 +203,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         return 'Cars/SUVs/';
       case 4:
         favoriteclicked = false;
+        chatactive = false;
         _homeactive = false;
         historyactive = true;
         fetchHistory();
@@ -479,16 +480,25 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                       return FutureBuilder<DocumentSnapshot>(
                         future: FirebaseFirestore.instance
                             .collection('chatRooms')
-                            .doc(chatsadded.elementAt(index))
+                            .doc(chatsadded[index])
                             .get(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          } else if (snapshot.connectionState ==
                               ConnectionState.done) {
                             if (snapshot.hasError) {
-                              return Text('Error: ${snapshot.error}');
+                              return Center(
+                                  child: Text('Error: ${snapshot.error}'));
                             }
+
                             if (snapshot.hasData && snapshot.data!.exists) {
-                              List<dynamic> users = snapshot.data!.get('users');
+                              var data =
+                                  snapshot.data!.data() as Map<String, dynamic>;
+                              List<dynamic> users = data['users'];
+                              // ignore: unused_local_variable
+                              Timestamp createdAt = data['createdAt'];
 
                               if (users.length == 2 &&
                                   users.every((user) => user is String)) {
@@ -497,26 +507,37 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
 
                                 return GestureDetector(
                                   onTap: () {
-                                    Navigator.pushNamed(context, '/chatPage',
-                                        arguments: {
-                                          'winningID': user1,
-                                          'creatorID': user2,
-                                        });
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/chatPage',
+                                      arguments: {
+                                        'winningID': user1,
+                                        'creatorID': user2,
+                                      },
+                                    );
                                   },
                                   child: Center(
                                     child: Text("asd"),
-                                  ), // Replace YourChatListItemWidget with your chat list item widget
+                                  ),
                                 );
                               } else {
-                                return Text(
-                                    'Expected exactly two user IDs for chatId: ${chatsadded.elementAt(index)}');
+                                return Center(
+                                  child: Text(
+                                    'Expected exactly two user IDs for chatId: ${chatsadded[index]}',
+                                  ),
+                                );
                               }
                             } else {
-                              return Text(
-                                  'Document does not exist for chatId: ${chatsadded.elementAt(index)}');
+                              return Center(
+                                child: Text(
+                                  'Document does not exist for chatId: ${chatsadded[index]}',
+                                ),
+                              );
                             }
                           } else {
-                            return CircularProgressIndicator();
+                            return Center(
+                              child: Text('State: ${snapshot.connectionState}'),
+                            );
                           }
                         },
                       );

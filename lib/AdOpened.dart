@@ -384,6 +384,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
 
   void toChat(Product product) {
     Navigator.pushNamed(context, '/chatPage', arguments: {
+      'product': product,
       'winningID': product.winningid,
       'creatorID': product.creatorID
     });
