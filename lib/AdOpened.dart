@@ -2,16 +2,17 @@
 
 import 'dart:async';
 import 'package:biddy/List/Product.dart';
-// ignore: unused_import
-import 'package:biddy/MainScreen.dart';
 import 'package:biddy/Signing.dart';
+import 'package:biddy/components/BidDialog.dart';
 import 'package:biddy/components/FABcustom.dart';
+import 'package:biddy/functions/formatRemainingTime.dart';
+import 'package:biddy/functions/mergeStreams.dart';
+import 'package:biddy/functions/showCustomSnackBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:biddy/functions/openimagenetwork.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:shimmer/shimmer.dart';
 
 class ItemsScreen extends StatefulWidget {
@@ -30,29 +31,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
   String address = '';
   bool timerIsNegative = false;
   late Timer _timer;
-  Duration _remainingTime = const Duration();
+  final Duration _remainingTime = const Duration();
   late String role;
   final User? auth = FirebaseAuth.instance.currentUser;
-  final CollectionReference _motorbikesCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Motorbikes');
-  final CollectionReference _CoupesCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Coupes');
-  final CollectionReference _HatchbacksCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Hatchbacks');
-  final CollectionReference _sedansCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Sedan');
-  final CollectionReference _suvsCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('SUVs');
 
   @override
   void didChangeDependencies() {
@@ -106,121 +87,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
     } catch (e) {
       print('Firestore login error: $e');
     }
-  }
-
-  Future<void> updateCarPrice(
-      String adId, int price, String collectionAddress, User user) async {
-    try {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      String? fcmToken = userDoc['fcmToken'];
-
-      DocumentReference adRefFirestore = FirebaseFirestore.instance
-          .collection('Ads')
-          .doc('Cars')
-          .collection(collectionAddress)
-          .doc(adId);
-
-      DatabaseReference adRefRealtime = FirebaseDatabase.instance
-          .reference()
-          .child('adsCollection')
-          .child('Cars')
-          .child(collectionAddress)
-          .child(adId);
-
-      DocumentSnapshot adSnapshotBefore = await adRefFirestore.get();
-      int priceBefore = adSnapshotBefore.exists
-          ? (adSnapshotBefore.data() != null
-              ? (adSnapshotBefore.data()! as Map<String, dynamic>)['price'] ?? 0
-              : 0)
-          : 0;
-      print('Price before transaction (Firestore): $priceBefore');
-
-      DataSnapshot adSnapshotBeforeRealtime =
-          await adRefRealtime.once().then((snapshot) => snapshot.snapshot);
-
-      int priceBeforeRealtime = 0;
-      if (adSnapshotBeforeRealtime.value is Map<dynamic, dynamic>) {
-        Map<dynamic, dynamic>? data =
-            adSnapshotBeforeRealtime.value as Map<dynamic, dynamic>?;
-        if (data != null && data.containsKey('price') && data['price'] is int) {
-          priceBeforeRealtime = data['price'] as int;
-        }
-      }
-      print(
-          'Price before transaction (Realtime Database): $priceBeforeRealtime');
-
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentSnapshot adSnapshot = await transaction.get(adRefFirestore);
-        if (adSnapshot.exists &&
-            adSnapshot.data() != null &&
-            (adSnapshot.data() as Map<String, dynamic>)['isUpdatingPrice'] ==
-                true) {
-          throw 'Another user is currently updating the price. Please try again later.';
-        }
-
-        await transaction.update(adRefFirestore, {
-          'isUpdatingPrice': true,
-        });
-        price = price + 500;
-        await transaction.update(adRefFirestore, {
-          'winningToken': fcmToken,
-          'price': price,
-          'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
-        });
-
-        await transaction.update(adRefFirestore, {
-          'isUpdatingPrice': false,
-        });
-      });
-
-      await adRefRealtime.update({
-        'winningToken': fcmToken,
-        'price': price,
-        'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
-      });
-
-      DocumentSnapshot adSnapshotAfter = await adRefFirestore.get();
-      int priceAfter = adSnapshotAfter.exists
-          ? (adSnapshotAfter.data() != null
-              ? (adSnapshotAfter.data()! as Map<String, dynamic>)['price'] ?? 0
-              : 0)
-          : 0;
-      print('Price after transaction (Firestore): $priceAfter');
-
-      DataSnapshot adSnapshotAfterRealtime =
-          await adRefRealtime.once().then((snapshot) => snapshot.snapshot);
-      int priceAfterRealtime = 0;
-      if (adSnapshotAfterRealtime.value is Map<dynamic, dynamic>) {
-        Map<dynamic, dynamic>? data =
-            adSnapshotAfterRealtime.value as Map<dynamic, dynamic>?;
-        if (data != null && data.containsKey('price') && data['price'] is int) {
-          priceAfterRealtime = data['price'] as int;
-        }
-      }
-
-      print('Price after transaction (Realtime Database): $priceAfterRealtime');
-
-      addToHistory(adId, auth!.uid);
-    } catch (error) {
-      print('Error updating car price: $error');
-    }
-  }
-
-  Stream<List<QuerySnapshot>> mergeStreams() {
-    // Create a list of streams from each collection
-    List<Stream<QuerySnapshot>> streams = [
-      _motorbikesCollection.snapshots(),
-      _CoupesCollection.snapshots(),
-      _HatchbacksCollection.snapshots(),
-      _sedansCollection.snapshots(),
-      _suvsCollection.snapshots(),
-    ];
-
-    // Merge all streams into a single stream
-    return CombineLatestStream.list(streams);
   }
 
   Future<void> removeFromFavorites(String productId, String? userId) async {
@@ -371,8 +237,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
   bool isWinner(User user, Product products) {
     if (user.uid == products.winningid || user.uid == products.creatorID) {
       return true;
-    } else
+    } else {
       return false;
+    }
   }
 
   void _startCountdown() {
@@ -406,21 +273,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
     Map<String, dynamic>? arguments =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     Product products = arguments['product'] as Product;
-    _remainingTime = DateTime.fromMillisecondsSinceEpoch(products.timestamp2)
-        .difference(DateTime.now());
-    if (_remainingTime.isNegative) {
-      timerIsNegative = true;
-    }
-    int totalSeconds = _remainingTime.inSeconds;
-    int days = totalSeconds ~/ (3600 * 24);
-    int hours = (totalSeconds % (3600 * 24)) ~/ 3600;
-    int minutes = (totalSeconds % 3600) ~/ 60;
-    int seconds = totalSeconds % 60;
-    // Format the remaining time as DD:HH:MM:SS
-    String formattedTime = '${days.toString().padLeft(2, '0')}:'
-        '${hours.toString().padLeft(2, '0')}:'
-        '${minutes.toString().padLeft(2, '0')}:'
-        '${seconds.toString().padLeft(2, '0')}';
+    Duration remainingTime = calculateRemainingTime(products.timestamp2);
+    bool timerIsNegative = remainingTime.isNegative;
+    String formattedTime = formatRemainingTime(remainingTime);
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -771,7 +626,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
                               as int; // Assuming price is stored as an integer
                           final year = doc['year']
                               as int; // Assuming year is stored as an integer
-                          //final kmsDriven = doc['kmsDriven']as int; // Assuming kmsDriven is stored as an integer
                           final time = doc['timestamp2'];
                           return vehicleName.contains("");
                         }).toList();
@@ -912,7 +766,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         );
                       },
                     ))
-              ], //ALL product items here
+              ],
             ),
           )),
           Padding(
@@ -942,8 +796,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
                               onTap: () {
                                 bool isUserLoggedin = (auth != null);
                                 if (isUserLoggedin) {
-                                  updateCarPrice(products.id, products.price,
-                                      products.collectionValue, auth!);
+                                  BidDialog(context, products, price, auth!);
+                                  addToHistory(products.id, auth!.uid);
                                 } else {
                                   Navigator.of(context).pushReplacement(
                                     MaterialPageRoute(
@@ -956,20 +810,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
                             )
                           : FABcustom(
                               onTap: () {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(SnackBar(
-                                  content: Text(
-                                    'Sorry, You cannot bid on your ad',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  backgroundColor: Colors.pink,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10.0),
-                                  ),
-                                  duration:
-                                      Duration(seconds: 4), // SnackBar duration
-                                ));
+                                showCustomSnackBar(
+                                    context, "Sorry, you cant bid on your ad");
                               },
                               text: "Restricted",
                             )

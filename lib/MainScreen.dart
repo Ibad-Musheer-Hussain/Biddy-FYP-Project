@@ -4,19 +4,16 @@ import 'dart:async';
 
 import 'package:biddy/List/Product.dart';
 import 'package:biddy/components/CategoryList.dart';
-// ignore: unused_import
-import 'package:biddy/components/CustomDrawer.dart';
 import 'package:biddy/components/FilterOptions.dart';
 import 'package:biddy/functions/animateStart.dart';
+import 'package:biddy/functions/mergeStreams.dart';
 import 'package:biddy/functions/signOut.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -26,58 +23,33 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  String role = 'User';
+  var role = 'User';
   bool favoriteclicked = false;
-  final CollectionReference _motorbikesCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Motorbikes');
-  final CollectionReference _CoupesCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Coupes');
-  final CollectionReference _HatchbacksCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Hatchbacks');
-  final CollectionReference _sedansCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('Sedan');
-  final CollectionReference _suvsCollection = FirebaseFirestore.instance
-      .collection('Ads')
-      .doc('Cars')
-      .collection('SUVs');
   var currentItem = Sedans;
-  final User? user = FirebaseAuth.instance.currentUser;
+  final user = FirebaseAuth.instance.currentUser;
   late AnimationController _controller;
   String _searchQuery = '';
   Offset offsetvar = const Offset(1, 0);
-  int selectedIndex = 0;
-  int previousIndex = 0;
+  int selectedIndex = 0, previousIndex = 0;
   String address = 'Cars/Sedans/';
   List<Product> products = [];
-  bool isContainerVisible = false;
+  bool isContainerVisible = false,
+      _homeactive = true,
+      chatactive = false,
+      historyactive = false,
+      isExpanded = false;
   int _selectedTab = 0;
-  bool _homeactive = true;
-  bool chatactive = false;
-  TextEditingController controller = TextEditingController();
-  TextEditingController priceMin = TextEditingController();
-  TextEditingController priceMax = TextEditingController();
-  TextEditingController YearMin = TextEditingController();
-  TextEditingController YearMax = TextEditingController();
-  TextEditingController KMMin = TextEditingController();
-  TextEditingController KMMax = TextEditingController();
+  TextEditingController controller = TextEditingController(),
+      priceMin = TextEditingController(),
+      priceMax = TextEditingController(),
+      YearMin = TextEditingController(),
+      YearMax = TextEditingController(),
+      KMMin = TextEditingController(),
+      KMMax = TextEditingController();
   List<bool> expandedList = [false];
   double containerWidth = 60.0;
-  bool historyactive = false;
-  bool isExpanded = false;
-  int time_in_milliseconds = DateTime.now().millisecondsSinceEpoch;
-  List<dynamic> favourites = [];
-  List<dynamic> history = [];
-  List<DocumentSnapshot> chatrooms = [];
-  late Future<List<String>> Chatroomids;
+  List<dynamic> favourites = [], history = [], chatrooms = [];
+  late Future<List<String>> chatRoomIds;
   List<String> chatsadded = [];
 
   @override
@@ -92,27 +64,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
       vsync: this,
       duration: Duration(milliseconds: 100), // Set your animation duration
     );
-    _firebaseMessaging.requestPermission();
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-      if (notification != null && android != null) {
-        showDialog(
-          context: context,
-          builder: (_) {
-            return AlertDialog(
-              title: Text(notification.title ?? ''),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Text(notification.body ?? '')],
-                ),
-              ),
-            );
-          },
-        );
-      }
-    });
   }
 
   Future<void> loadChatrooms() async {
@@ -305,20 +256,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
     readSubcollectionDocuments(address, index);
   }
 
-  Stream<List<QuerySnapshot>> mergeStreams() {
-    // Create a list of streams from each collection
-    List<Stream<QuerySnapshot>> streams = [
-      _motorbikesCollection.snapshots(),
-      _CoupesCollection.snapshots(),
-      _HatchbacksCollection.snapshots(),
-      _sedansCollection.snapshots(),
-      _suvsCollection.snapshots(),
-    ];
-
-    // Merge all streams into a single stream
-    return CombineLatestStream.list(streams);
-  }
-
   Future<void> readSubcollectionDocuments(String address, int index) async {
     try {
       CollectionReference subCollectionRef =
@@ -333,7 +270,9 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           Product product =
               Product.fromMap(subDocSnapshot.data() as Map<String, dynamic>);
           print(product);
-          if (product.timestamp2 > time_in_milliseconds) products.add(product);
+          if (product.timestamp2 > DateTime.now().millisecondsSinceEpoch) {
+            products.add(product);
+          }
         }
         // Now, 'products' contains all the documents in the subcollection.
 
@@ -444,10 +383,9 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 signOut(context);
               },
               child: CircleAvatar(
-                radius: 20, // Adjust the size as needed
-                backgroundColor: Colors.white, // Background color of the avatar
+                radius: 20,
+                backgroundColor: Colors.white,
                 backgroundImage: AssetImage('lib/images/avatar.jpg'),
-                // You can also put initials or icons inside the avatar
               ),
             ),
           ],
@@ -470,79 +408,84 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 kmMax: KMMax,
                 onExpansionChanged: _handleExpansionChanged),
           chatactive
-              ? Container(
-                  height: 300,
-                  child: ListView.builder(
-                    physics: ClampingScrollPhysics(),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: chatsadded.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance
-                            .collection('chatRooms')
-                            .doc(chatsadded[index])
-                            .get(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
-                          } else if (snapshot.connectionState ==
-                              ConnectionState.done) {
-                            if (snapshot.hasError) {
-                              return Center(
-                                  child: Text('Error: ${snapshot.error}'));
-                            }
+              ? Expanded(
+                  child: chatsadded.isEmpty
+                      ? Center(child: Text('You have no active chats'))
+                      : ListView.builder(
+                          physics: ClampingScrollPhysics(),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: chatsadded.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance
+                                  .collection('chatRooms')
+                                  .doc(chatsadded[index])
+                                  .get(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return Center(
+                                      child: CircularProgressIndicator());
+                                } else if (snapshot.connectionState ==
+                                    ConnectionState.done) {
+                                  if (snapshot.hasError) {
+                                    return Center(
+                                        child:
+                                            Text('Error: ${snapshot.error}'));
+                                  }
 
-                            if (snapshot.hasData && snapshot.data!.exists) {
-                              var data =
-                                  snapshot.data!.data() as Map<String, dynamic>;
-                              List<dynamic> users = data['users'];
-                              // ignore: unused_local_variable
-                              Timestamp createdAt = data['createdAt'];
-
-                              if (users.length == 2 &&
-                                  users.every((user) => user is String)) {
-                                String user1 = users[0];
-                                String user2 = users[1];
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/chatPage',
-                                      arguments: {
-                                        'winningID': user1,
-                                        'creatorID': user2,
-                                      },
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.exists) {
+                                    var data = snapshot.data!.data()
+                                        as Map<String, dynamic>;
+                                    List<dynamic> users = data['users'];
+                                    if (users.length == 2 &&
+                                        users.every((user) => user is String)) {
+                                      String user1 = users[0];
+                                      String user2 = users[1];
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/chatPage',
+                                            arguments: {
+                                              'winningID': user1,
+                                              'creatorID': user2,
+                                            },
+                                          );
+                                        },
+                                        child: Container(
+                                            color: Colors.red,
+                                            child: Center(child: Text("asd"))),
+                                      );
+                                    } else {
+                                      return Center(
+                                        child: Text(
+                                          'Expected exactly two user IDs for chatId: ${chatsadded[index]}',
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    return Center(
+                                      child: Container(
+                                        color: Colors.red,
+                                        child: Text(
+                                          'Document does not exist for chatId: ${chatsadded[index]}',
+                                        ),
+                                      ),
                                     );
-                                  },
-                                  child: Center(
-                                    child: Text("asd"),
-                                  ),
-                                );
-                              } else {
-                                return Center(
-                                  child: Text(
-                                    'Expected exactly two user IDs for chatId: ${chatsadded[index]}',
-                                  ),
-                                );
-                              }
-                            } else {
-                              return Center(
-                                child: Text(
-                                  'Document does not exist for chatId: ${chatsadded[index]}',
-                                ),
-                              );
-                            }
-                          } else {
-                            return Center(
-                              child: Text('State: ${snapshot.connectionState}'),
+                                  }
+                                } else {
+                                  return Center(
+                                    child: Text(
+                                        'State: ${snapshot.connectionState}'),
+                                  );
+                                }
+                              },
                             );
-                          }
-                        },
-                      );
-                    },
-                  ))
+                          },
+                        ),
+                )
               : historyactive
                   ? Expanded(
                       child: Padding(
