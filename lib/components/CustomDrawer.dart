@@ -31,7 +31,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             decoration: const BoxDecoration(
               color: Color.fromARGB(255, 255, 149, 163),
             ),
-            height: MediaQuery.of(context).size.height / 5.7,
+            height: MediaQuery.of(context).size.height / 5.7, //5.7
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: SingleChildScrollView(
@@ -40,21 +40,17 @@ class _CustomDrawerState extends State<CustomDrawer> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(
-                      height: 28,
-                    ),
-                    Text(
-                      "  ${widget.name}", // Displaying dynamic name here
-                      style: TextStyle(fontSize: 20, color: Colors.white),
+                      height: 38,
                     ),
                     Text(
                       "  Available balance",
-                      style: TextStyle(fontSize: 18, color: Colors.black54),
+                      style: TextStyle(fontSize: 20, color: Colors.black87),
                     ),
                     Row(
                       children: [
                         Text(
                           "  Rs.${widget.balance}",
-                          style: TextStyle(fontSize: 18, color: Colors.black54),
+                          style: TextStyle(fontSize: 22, color: Colors.black87),
                         ),
                         TextButton.icon(
                           onPressed: () {

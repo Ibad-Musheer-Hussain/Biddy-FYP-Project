@@ -68,10 +68,7 @@ class _Continue extends State<LoginPage> {
         duration: Duration(seconds: 4), // SnackBar duration
       ));
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => MainPage()),
-      );
+      Navigator.pushNamed(context, '/finalizeaccount');
     } catch (e) {
       if (e is FirebaseAuthException) {
         if (e.code == 'invalid-email') {}

@@ -277,7 +277,7 @@ class _ContinueaccountState extends State<Continueaccount> {
                   final formData = formKey.currentState?.value;
                   print('Form data: $formData');
                   await updateinformation();
-                  Navigator.pushNamed(context, '/circleavatar');
+                  Navigator.pushNamed(context, '/MainPage');
                 } else {
                   print('Validation failed');
                 }
