@@ -29,21 +29,27 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   cloud_firestore: ^4.17.4
+  csv: ^6.0.0
   firebase_auth: ^4.19.6
   firebase_core: ^2.31.1
   firebase_database: ^10.5.6
   firebase_messaging: ^14.9.3
+  firebase_ml_model_downloader: ^0.2.5
   firebase_storage: ^11.7.6
   flutter:
     sdk: flutter
   flutter_image_compress: ^2.3.0
   google_sign_in: ^6.2.1
+  http: ^1.2.1
   image_picker: ^1.1.1
   photo_view: ^0.15.0
   rxdart: ^0.27.7
   shimmer: ^3.0.0
   timezone: ^0.9.3
-
+  flutter_form_builder: ^9.3.0
+  form_builder_validators: ^10.0.1
+  tflite_flutter: ^0.10.4
+  image_cropper: ^7.1.0
 
 dev_dependencies:
   flutter_test:
@@ -72,10 +78,11 @@ flutter:
     - lib/images/download.png
     - lib/images/google.png
     - lib/images/Biddy.png
-    - lib/images/0004.jpeg
     - lib/images/model.tflite
     - lib/images/auction2.png
     - lib/images/avatar.jpg
+    - lib/images/images.jpg
+    - lib/images/jazz.png 
     # - images/a_dot_ham.jpeg
 
 

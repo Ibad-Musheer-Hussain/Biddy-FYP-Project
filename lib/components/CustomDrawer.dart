@@ -3,9 +3,24 @@
 import 'package:biddy/functions/signOut.dart' show signOut;
 import 'package:flutter/material.dart';
 
-class CustomDrawer extends StatelessWidget {
-  const CustomDrawer({super.key});
+// ignore: must_be_immutable
+class CustomDrawer extends StatefulWidget {
+  String name;
+  int balance;
+  final VoidCallback onBidHistoryTap;
 
+  CustomDrawer({
+    Key? key,
+    required this.name,
+    required this.balance,
+    required this.onBidHistoryTap,
+  }) : super(key: key);
+
+  @override
+  _CustomDrawerState createState() => _CustomDrawerState();
+}
+
+class _CustomDrawerState extends State<CustomDrawer> {
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -15,21 +30,44 @@ class CustomDrawer extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               color: Color.fromARGB(255, 255, 149, 163),
-              /*borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(12.0),
-                bottomRight: Radius.circular(12.0),
-              ),*/
             ),
-            height: MediaQuery.of(context).size.height / 7.8,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Container(
-                  alignment: Alignment.bottomLeft,
-                  child: const Text(
-                    "  User Last Name",
-                    style: TextStyle(fontSize: 24, color: Colors.white),
-                  ),
+            height: MediaQuery.of(context).size.height / 5.7,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: SingleChildScrollView(
+                physics: NeverScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      height: 28,
+                    ),
+                    Text(
+                      "  ${widget.name}", // Displaying dynamic name here
+                      style: TextStyle(fontSize: 20, color: Colors.white),
+                    ),
+                    Text(
+                      "  Available balance",
+                      style: TextStyle(fontSize: 18, color: Colors.black54),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          "  Rs.${widget.balance}",
+                          style: TextStyle(fontSize: 18, color: Colors.black54),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/payment');
+                          },
+                          label: Icon(
+                            Icons.add,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -58,6 +96,7 @@ class CustomDrawer extends StatelessWidget {
             ),
             onTap: () {
               Navigator.pop(context); // Close the drawer
+              widget.onBidHistoryTap();
             },
           ),
           ListTile(
@@ -102,7 +141,7 @@ class CustomDrawer extends StatelessWidget {
           ),
           Container(
             height: 20,
-          )
+          ),
         ],
       ),
     );

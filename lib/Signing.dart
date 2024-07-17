@@ -1,6 +1,7 @@
 // ignore_for_file: file_names, prefer_final_fields, avoid_print, use_build_context_synchronously, prefer_const_constructors, sized_box_for_whitespace
 
 import 'dart:async';
+import 'package:biddy/ForgotPasswordDialog.dart';
 import 'package:biddy/MainScreen.dart';
 import 'package:biddy/components/LoginTextField.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -42,6 +43,12 @@ class _Continue extends State<LoginPage> {
             .doc(user?.uid)
             .set({
           'role': pass.text.toString(),
+          'balance': 0,
+          'name': "change in signing.dart",
+          'history': [],
+          'favourites': [],
+          'Userads': [],
+          'chats': []
         });
         print('Firestore data stored successfully');
       } catch (e) {
@@ -200,15 +207,26 @@ class _Continue extends State<LoginPage> {
   void _checkEmailRegistration(BuildContext context) async {
     bool isRegistered = await isEmailRegistered(context, email);
 
-    setState(() {
-      _showLogin = isRegistered;
-    });
+    if (email.text.isNotEmpty) {
+      setState(() {
+        _showLogin = isRegistered;
+      });
+    }
 
     if (isRegistered) {
       print("User is already registered");
     } else {
       print("User is not registered");
     }
+  }
+
+  void _showForgotPasswordDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ForgotPasswordDialog();
+      },
+    );
   }
 
   @override
@@ -234,83 +252,153 @@ class _Continue extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      height: 230,
-                      child: Stack(
-                        children: [
-                          AnimatedPositioned(
-                            duration: Duration(milliseconds: 800),
-                            curve: Curves.easeInOut,
-                            left: _showFirstContainer
-                                ? 2
-                                : -MediaQuery.of(context).size.width,
-                            child: Container(
-                              width: MediaQuery.of(context).size.width / 1.28,
-                              height: 180,
-                              decoration: BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    spreadRadius: 1,
-                                    blurRadius: 3,
-                                    offset: Offset(0, 1),
-                                  ),
-                                ],
-                                borderRadius: BorderRadius.circular(12),
-                                color: Color.fromARGB(255, 255, 218, 223),
-                              ),
-                              child: Column(
-                                children: <Widget>[
-                                  SizedBox(
-                                    height: 12,
-                                  ),
-                                  Text(
-                                    "Welcome to Biddy", //FIRST CONTAINER
-                                    style: TextStyle(
-                                      fontSize: 29,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
+                    Center(
+                      child: Container(
+                        height: 230,
+                        child: Stack(
+                          children: [
+                            AnimatedPositioned(
+                              duration: Duration(milliseconds: 800),
+                              curve: Curves.easeInOut,
+                              left: _showFirstContainer
+                                  ? 2
+                                  : -MediaQuery.of(context).size.width,
+                              child: Container(
+                                width: MediaQuery.of(context).size.width / 1.28,
+                                height: 217.5,
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 1,
+                                      offset: Offset(0, 1),
                                     ),
-                                  ),
-                                  LoginTextField(
-                                    textEditingController: email,
-                                    hintText: 'Email',
-                                    obscureText: false,
-                                  ),
-                                ],
+                                  ],
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Color.fromARGB(255, 255, 218, 223),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    SizedBox(
+                                      height: 12,
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "   Login or Signup",
+                                          textAlign: TextAlign.left,
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      "    Get Started for free",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.black38,
+                                      ),
+                                    ),
+                                    LoginTextField(
+                                      textEditingController: email,
+                                      hintText: 'Email',
+                                      obscureText: false,
+                                    ),
+                                    Transform.translate(
+                                      offset: Offset(0, 8),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                right: 70.0),
+                                            child: TextButton(
+                                                onPressed: () {
+                                                  _showForgotPasswordDialog(
+                                                      context);
+                                                },
+                                                child: Text(
+                                                  "Forgot Password",
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    decoration: TextDecoration
+                                                        .underline,
+                                                    color: Colors.black38,
+                                                  ),
+                                                )),
+                                          ),
+                                          TextButton(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          const MainPage()),
+                                                );
+                                              },
+                                              child: Text(
+                                                "Guest Login",
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  color: Colors.black38,
+                                                ),
+                                              ))
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          AnimatedPositioned(
-                            duration: Duration(milliseconds: 800),
-                            curve: Curves.easeInOut,
-                            right: _showFirstContainer
-                                ? -MediaQuery.of(context).size.width
-                                : 7,
-                            child: Container(
-                              width: MediaQuery.of(context).size.width / 1.29,
-                              height: 180,
-                              decoration: BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    spreadRadius: 1,
-                                    blurRadius: 3,
-                                    offset: Offset(0, 1),
-                                  ),
-                                ],
-                                borderRadius: BorderRadius.circular(12),
-                                color: Color.fromARGB(255, 255, 218, 223),
-                              ),
-                              child: Column(
-                                children: <Widget>[
-                                  Padding(
-                                    //SECOND CONTAINER
-                                    padding: const EdgeInsets.only(right: 40.0),
-                                    child: Row(
+                            AnimatedPositioned(
+                              duration: Duration(milliseconds: 800),
+                              curve: Curves.easeInOut,
+                              right: _showFirstContainer
+                                  ? -MediaQuery.of(context).size.width
+                                  : 7,
+                              child: Container(
+                                width: MediaQuery.of(context).size.width / 1.29,
+                                height: 217.5,
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 1,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Color.fromARGB(255, 255, 218, 223),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    SizedBox(
+                                      height: 2,
+                                    ),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
+                                        Text(
+                                          _showLogin ? "  Login" : "  Signup",
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
                                         IconButton(
                                           onPressed: () {
                                             setState(() {
@@ -318,31 +406,70 @@ class _Continue extends State<LoginPage> {
                                                   !_showFirstContainer;
                                             });
                                           },
-                                          icon: Icon(Icons.arrow_back),
+                                          icon: Icon(Icons.close),
                                           color: Colors.black,
                                         ),
-                                        Text(
-                                          _showLogin ? "Login" : "Signup",
-                                          style: TextStyle(
-                                            fontSize: 29,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        Container(), // For space between dont remove
                                       ],
                                     ),
-                                  ),
-                                  LoginTextField(
-                                    textEditingController: pass,
-                                    hintText: "Password",
-                                    obscureText: true,
-                                  ),
-                                ],
+                                    SizedBox(
+                                      height: 3,
+                                    ),
+                                    Transform.translate(
+                                      offset: Offset(0, -12),
+                                      child: Text(
+                                        "   Get Started for free",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.black38,
+                                        ),
+                                      ),
+                                    ),
+                                    Transform.translate(
+                                      offset: Offset(0, -4),
+                                      child: LoginTextField(
+                                        textEditingController: pass,
+                                        hintText: "Password",
+                                        obscureText: true,
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceAround,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              right: 70.0),
+                                          child: TextButton(
+                                              onPressed: () {},
+                                              child: Text(
+                                                "Forgot Password",
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  color: Colors.black38,
+                                                ),
+                                              )),
+                                        ),
+                                        TextButton(
+                                            onPressed: () {},
+                                            child: Text(
+                                              "Guest Login",
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                color: Colors.black38,
+                                              ),
+                                            ))
+                                      ],
+                                    )
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     FABcustom(
@@ -363,42 +490,32 @@ class _Continue extends State<LoginPage> {
                           }
                           _showFirstContainer = !_showFirstContainer;
                         },
-                        text: _showLogin ? "Continue" : "Sign Up"),
+                        text: _showLogin ? "Continue with email" : "Sign Up"),
                     SizedBox(
                       height: 15,
                     ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const MainPage()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.pink, // Text color
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Divider(
+                            thickness: 2,
+                            color: Colors.white,
+                          ),
                         ),
-                        elevation: 2.0,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 20, right: 30, top: 18, bottom: 18),
-                        child: Text('Continue without account',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18.0)),
-                      ),
-                    ),
-                    SizedBox(
-                      height: 15,
-                    ),
-                    Divider(
-                      thickness: 2, // Adjust thickness as needed
-                      color: Colors.white, // Set color according to your design
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Text(
+                            "or",
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            thickness: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(
                       height: 15,
@@ -408,17 +525,20 @@ class _Continue extends State<LoginPage> {
                         signInWithGoogle(context);
                       },
                       icon: Image.asset(
-                        'lib/images/google.png', // Replace this with the path to your Google logo asset
+                        'lib/images/google.png',
                         height: 24.0,
                       ),
                       label: Padding(
                         padding: const EdgeInsets.only(
-                            left: 50.0, right: 60, top: 18, bottom: 18),
-                        child: Text('Sign in with Google'),
+                            left: 45.0, right: 50, top: 18, bottom: 18),
+                        child: Text(
+                          'Continue with Google              ',
+                          style: TextStyle(fontSize: 14),
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.black,
-                        backgroundColor: Colors.white, // Text color
+                        backgroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.0),
                         ),

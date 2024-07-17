@@ -10,7 +10,8 @@ void BidDialog(
   return showDialog(
     context: context,
     builder: (BuildContext context) {
-      List<int> numbers = convertToDigitList(price);
+      List<int> numbers = List.generate(8, (index) => 0);
+      numbers = convertToDigitList(price);
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
@@ -21,7 +22,7 @@ void BidDialog(
                 height: 120,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(7, (index) {
+                  children: List.generate(8, (index) {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
@@ -38,7 +39,7 @@ void BidDialog(
                         ),
                         Text(numbers[index].toString()),
                         IconButton(
-                          icon: Icon(Icons.arrow_downward),
+                          icon: const Icon(Icons.arrow_downward),
                           onPressed: () {
                             setState(() {
                               if (numbers[index] == 0) {
@@ -88,7 +89,7 @@ void BidDialog(
 List<int> convertToDigitList(int number) {
   String numberString = number.toString();
 
-  while (numberString.length < 7) {
+  while (numberString.length < 8) {
     numberString = '0$numberString';
   }
 
@@ -104,11 +105,6 @@ List<int> convertToDigitList(int number) {
 Future<void> updateCarPrice(String adId, int price, String collectionAddress,
     User user, int combinedNumber) async {
   try {
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    String? fcmToken = userDoc['fcmToken'];
 
     DocumentReference adRefFirestore = FirebaseFirestore.instance
         .collection('Ads')
@@ -158,7 +154,6 @@ Future<void> updateCarPrice(String adId, int price, String collectionAddress,
       });
       price = combinedNumber;
       await transaction.update(adRefFirestore, {
-        'winningToken': fcmToken,
         'price': price,
         'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
       });
@@ -169,7 +164,6 @@ Future<void> updateCarPrice(String adId, int price, String collectionAddress,
     });
 
     await adRefRealtime.update({
-      'winningToken': fcmToken,
       'price': price,
       'winningid': user.uid, // Assuming `user.uid` is the user's unique ID
     });

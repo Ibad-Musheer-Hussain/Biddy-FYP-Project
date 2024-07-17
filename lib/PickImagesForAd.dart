@@ -2,7 +2,8 @@
 
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:biddy/ContinueAd.dart';
+//import 'package:biddy/ContinueAd.dart';
+import 'package:biddy/ContinueAdBetter.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -264,7 +265,7 @@ class _CreateAdState extends State<CreateAd> {
               );
             }),
             Text(
-              "Create Ad",
+              "Create An Ad",
               style: TextStyle(color: Colors.white),
             ),
             IconButton(
@@ -456,7 +457,7 @@ class _CreateAdState extends State<CreateAd> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ContinueAd(
+                          builder: (context) => ContinueAdBetter(
                               uploadImagesFuture: uploadImagesFuture),
                         ),
                       );

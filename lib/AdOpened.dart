@@ -2,8 +2,9 @@
 
 import 'dart:async';
 import 'package:biddy/List/Product.dart';
-import 'package:biddy/Signing.dart';
+import 'package:biddy/NeedLoginDialog.dart';
 import 'package:biddy/components/BidDialog.dart';
+import 'package:biddy/components/CustomTile.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:biddy/functions/formatRemainingTime.dart';
 import 'package:biddy/functions/mergeStreams.dart';
@@ -26,6 +27,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
   int flag = 0; //for snackbar displaying that price has been updated
   int price = 0;
   bool isFavorite = false;
+  late String chatRoomId;
   late StreamSubscription<DatabaseEvent> _priceSubscription;
   late DatabaseReference _priceRef;
   String address = '';
@@ -253,6 +255,15 @@ class _ItemsScreenState extends State<ItemsScreen> {
     });
   }
 
+  void _showLoginDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return NeedLogin();
+      },
+    );
+  }
+
   @override
   void dispose() {
     _priceSubscription.cancel();
@@ -260,7 +271,77 @@ class _ItemsScreenState extends State<ItemsScreen> {
     super.dispose();
   }
 
+  Future<String> _getUserName(String userId) async {
+    //for testing using chat1@gmail.com
+    //for testing using chat2@gmail.com
+    String userName = '';
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        setState(() {
+          userName = userDoc['name']; // Assuming the field name is 'name'
+          print(userName);
+        });
+        return userName;
+      } else {
+        print('User does not exist');
+        return userName;
+      }
+    } catch (e) {
+      print('Error getting user: $e');
+      return userName;
+    }
+  }
+
+  Future<void> createAndStoreChatRoom(
+      String winnerID, String creatorID, Product product) async {
+    DocumentReference userRef =
+        FirebaseFirestore.instance.collection('users').doc(auth!.uid);
+    // Get the user document
+    String buyer = await _getUserName(winnerID);
+    DocumentSnapshot userSnapshot = await userRef.get();
+    if (userSnapshot.exists) {
+      Map<String, dynamic>? userData = userSnapshot.data()
+          as Map<String, dynamic>?; // Cast to Map<String, dynamic> or null
+      List<dynamic> chats = userData?['chats'] ?? [];
+      // Check if the chat room already exists for the current user
+      if (!chats.contains(chatRoomId)) {
+        // Create a new document in the 'chatRooms' collection
+        DocumentReference newChatRef =
+            FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
+        print("creating from Ad opened page");
+        // Set the chat room data
+        await newChatRef.set({
+          'users': [winnerID, creatorID],
+          'buyer': buyer,
+          'seller': await _getUserName(creatorID),
+          'createdAt': Timestamp.now(),
+        });
+        await newChatRef.update({
+          'title': product.title,
+        });
+        // Add the chat room ID to the user's chats array
+        chats.add(chatRoomId);
+        await userRef.update({'chats': chats});
+        print('New chat room created with ID: $chatRoomId');
+      } else {
+        print('Chat room already exists');
+      }
+    } else {
+      print('User document not found');
+    }
+  }
+
+  String _generateChatRoomId(String user1, String user2) {
+    return user1.hashCode <= user2.hashCode ? '$user1-$user2' : '$user2-$user1';
+  }
+
   void toChat(Product product) {
+    chatRoomId = _generateChatRoomId(product.winningid, product.creatorID);
+    createAndStoreChatRoom(product.winningid, product.creatorID, product);
     Navigator.pushNamed(context, '/chatPage', arguments: {
       'product': product,
       'winningID': product.winningid,
@@ -450,154 +531,149 @@ class _ItemsScreenState extends State<ItemsScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(0.0),
-                  child: ExpansionTile(
-                    initiallyExpanded: true,
+                  child: CustomExpansionTile(
+                    //initiallyExpanded: true,
                     title: Text(
                       'Product Description',
                       style: TextStyle(fontSize: 24),
                     ),
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          products.description,
-                          style: TextStyle(fontSize: 18),
-                        ),
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(
+                        products.description,
+                        style: TextStyle(fontSize: 18),
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(0.0),
-                  child: ExpansionTile(
-                    initiallyExpanded: true,
+                  child: CustomExpansionTile(
                     title: const Text(
                       'Product Specifications',
                       style: TextStyle(fontSize: 24),
                     ),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Table(
-                          border: TableBorder.all(),
-                          children: [
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('Brand'),
-                                  ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Table(
+                        border: TableBorder.all(),
+                        children: [
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('Brand'),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text(products.brand),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(products.brand),
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text("Price"),
-                                  ),
+                              ),
+                            ],
+                          ),
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text("Price"),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('${products.price}'),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('${products.price}'),
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('Model'),
-                                  ),
+                              ),
+                            ],
+                          ),
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('Model'),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text(products.model),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(products.model),
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('Fuel'),
-                                  ),
+                              ),
+                            ],
+                          ),
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('Fuel'),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text(products.fuel),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(products.fuel),
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('KMs Driven'),
-                                  ),
+                              ),
+                            ],
+                          ),
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('KMs Driven'),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('${products.kms}'),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('${products.kms}'),
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('Transmission'),
-                                  ),
+                              ),
+                            ],
+                          ),
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('Transmission'),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text(products.transmission),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(products.transmission),
                                 ),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('City'),
-                                  ),
+                              ),
+                            ],
+                          ),
+                          TableRow(
+                            children: [
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text('City'),
                                 ),
-                                TableCell(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text(products.city),
-                                  ),
+                              ),
+                              TableCell(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(products.city),
                                 ),
-                              ],
-                            ),
-                            // Copy tablerow for more rows
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                          // Copy tablerow for more rows
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 Padding(
@@ -673,11 +749,15 @@ class _ItemsScreenState extends State<ItemsScreen> {
                             return GestureDetector(
                               onTap: () {
                                 flag = 0;
-                                Navigator.pushNamed(context, '/itemScreen',
-                                    arguments: {
-                                      'product': product,
-                                      'id': product.id
-                                    });
+                                if (auth != null) {
+                                  Navigator.pushNamed(context, '/itemScreen',
+                                      arguments: {
+                                        'product': product,
+                                        'id': product.id
+                                      });
+                                } else {
+                                  _showLoginDialog(context);
+                                }
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
@@ -703,38 +783,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                                   width: 300,
                                                   height: 270,
                                                   fit: BoxFit.fill,
-                                                  frameBuilder: (BuildContext
-                                                          context,
-                                                      Widget child,
-                                                      int? frame,
-                                                      bool
-                                                          wasSynchronouslyLoaded) {
-                                                    if (frame != null) {
-                                                      return child; // Return the image if frame is not null (indicating loaded)
-                                                    } else {
-                                                      return Shimmer.fromColors(
-                                                        baseColor:
-                                                            Colors.grey[300]!,
-                                                        highlightColor:
-                                                            Colors.grey[100]!,
-                                                        child: Container(
-                                                            color:
-                                                                Colors.white),
-                                                      ); // Show shimmer effect while the image is loading
-                                                    }
-                                                  },
-                                                  loadingBuilder:
-                                                      (BuildContext context,
-                                                          Widget child,
-                                                          ImageChunkEvent?
-                                                              loadingProgress) {
-                                                    if (loadingProgress ==
-                                                        null) {
-                                                      return child; // Return the image if loading is complete
-                                                    } else {
-                                                      return child; // Return the image with loading progress if it's still loading
-                                                    }
-                                                  },
                                                 ),
                                               ],
                                             ),
@@ -799,11 +847,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                   BidDialog(context, products, price, auth!);
                                   addToHistory(products.id, auth!.uid);
                                 } else {
-                                  Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginPage(),
-                                    ),
-                                  );
+                                  _showLoginDialog(context);
                                 }
                               },
                               text: "Bid",

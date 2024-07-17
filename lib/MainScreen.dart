@@ -3,11 +3,12 @@
 import 'dart:async';
 
 import 'package:biddy/List/Product.dart';
+import 'package:biddy/NeedLoginDialog.dart';
 import 'package:biddy/components/CategoryList.dart';
+import 'package:biddy/components/CustomDrawer.dart';
 import 'package:biddy/components/FilterOptions.dart';
 import 'package:biddy/functions/animateStart.dart';
 import 'package:biddy/functions/mergeStreams.dart';
-import 'package:biddy/functions/signOut.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,15 +24,17 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
-  var role = 'User';
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool favoriteclicked = false;
   var currentItem = Sedans;
   final user = FirebaseAuth.instance.currentUser;
   late AnimationController _controller;
   String _searchQuery = '';
   Offset offsetvar = const Offset(1, 0);
-  int selectedIndex = 0, previousIndex = 0;
+  int selectedIndex = 0, previousIndex = 0, balance = 0;
   String address = 'Cars/Sedans/';
+  String name = "User Last Name";
+  bool showCategoryList = true;
   List<Product> products = [];
   bool isContainerVisible = false,
       _homeactive = true,
@@ -51,6 +54,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   List<dynamic> favourites = [], history = [], chatrooms = [];
   late Future<List<String>> chatRoomIds;
   List<String> chatsadded = [];
+  List<String> chatIds = [];
 
   @override
   void initState() {
@@ -67,7 +71,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   }
 
   Future<void> loadChatrooms() async {
-    List<String> chatIds = await _getUserChatRooms();
+    chatIds = await _getUserChatRooms();
     getChatrooms(chatIds);
   }
 
@@ -84,7 +88,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         return [];
       }
 
-      List<String> chatIds = List<String>.from(userDoc['chats'] ?? []);
+      chatIds = List<String>.from(userDoc['chats'] ?? []);
 
       if (chatIds.isEmpty) {
         return [];
@@ -98,6 +102,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   }
 
   void getChatrooms(List<String> chatIds) {
+    chatsadded.clear();
     for (String chatId in chatIds) {
       FirebaseFirestore.instance
           .collection('chatRooms')
@@ -107,8 +112,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         if (snapshot.exists) {
           chatrooms.add(snapshot);
           chatsadded.add(chatId);
-          print(chatsadded);
-          print(chatsadded.length);
+
         }
       });
     }
@@ -121,40 +125,48 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
 
     switch (index) {
       case 0:
+        login();
         _homeactive = true;
+        showCategoryList = true;
         chatactive = false;
         historyactive = false;
         favoriteclicked = false;
         return 'Cars/Sedan/';
       case 1:
         _homeactive = false;
+        showCategoryList = false;
         favoriteclicked = true;
         historyactive = false;
         chatactive = false;
         fetchFavourites();
       case 2:
         favoriteclicked = false;
+        showCategoryList = false;
         chatactive = false;
         historyactive = false;
         _homeactive = false;
-        print(user);
-        print(user?.uid);
         if (user != null) {
           Navigator.pushNamed(context, '/CreateAd');
         } else {
-          Navigator.pushNamed(context,
-              '/LoginPage'); //user not signed in dialog box and turn to signin screen
+          index = 0;
+          _changeTab(index);
+          _showLoginDialog(
+              context); //user not signed in dialog box and turn to signin screen
         }
 
       case 3:
         favoriteclicked = false;
         chatactive = true;
+        showCategoryList = false;
         historyactive = false;
         _homeactive = false;
+        chatIds.clear;
+        loadChatrooms();
         return 'Cars/SUVs/';
       case 4:
         favoriteclicked = false;
         chatactive = false;
+        showCategoryList = false;
         _homeactive = false;
         historyactive = true;
         fetchHistory();
@@ -202,10 +214,8 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   }
 
   void login() async {
-    //can be used for getting first name of user
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-
       FirebaseFirestore.instance
           .collection('users')
           .doc(user?.uid)
@@ -214,8 +224,10 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         if (documentSnapshot.exists) {
           Map<String, dynamic> data =
               documentSnapshot.data() as Map<String, dynamic>;
-          role = data['First'] as String;
-          print('Role: $role');
+          name = data['name'];
+          balance = data['balance'];
+          print('name: $name');
+          print('Balance: $balance');
         }
       }).catchError((error) {
         print('Error getting document: $error');
@@ -305,6 +317,15 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
     });
   }
 
+  void _showLoginDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return NeedLogin();
+      },
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -314,9 +335,9 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        //silverappbar search kro
         scrolledUnderElevation:
             0.0, //for disabling changing of color when scrolling app
         automaticallyImplyLeading: false,
@@ -380,7 +401,12 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
             InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: () {
-                signOut(context);
+                if (user != null) {
+                  login();
+                  _scaffoldKey.currentState?.openDrawer();
+                } else {
+                  _showLoginDialog(context);
+                }
               },
               child: CircleAvatar(
                 radius: 20,
@@ -393,11 +419,13 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          if (_searchQuery.isEmpty)
+          if (_searchQuery.isEmpty && showCategoryList == true)
             CategoryList(
                 types: Types,
                 selectedIndex: selectedIndex,
                 onCategoryTap: _animateToIndex)
+          else if (_searchQuery.isEmpty && showCategoryList == false)
+            Container()
           else
             FilterOptions(
                 priceMin: priceMin,
@@ -409,11 +437,12 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 onExpansionChanged: _handleExpansionChanged),
           chatactive
               ? Expanded(
+                  // CHATS
                   child: chatsadded.isEmpty
                       ? Center(child: Text('You have no active chats'))
                       : ListView.builder(
                           physics: ClampingScrollPhysics(),
-                          scrollDirection: Axis.horizontal,
+                          scrollDirection: Axis.vertical,
                           itemCount: chatsadded.length,
                           itemBuilder: (BuildContext context, int index) {
                             return FutureBuilder<DocumentSnapshot>(
@@ -444,20 +473,47 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                       String user1 = users[0];
                                       String user2 = users[1];
                                       return GestureDetector(
-                                        onTap: () {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/chatPage',
-                                            arguments: {
-                                              'winningID': user1,
-                                              'creatorID': user2,
-                                            },
-                                          );
-                                        },
-                                        child: Container(
-                                            color: Colors.red,
-                                            child: Center(child: Text("asd"))),
-                                      );
+                                          onTap: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/chatPage',
+                                              arguments: {
+                                                'winningID': user1,
+                                                'creatorID': user2,
+                                              },
+                                            );
+                                          },
+                                          child: ListTile(
+                                              leading: Container(
+                                                width: 80,
+                                                height: 80,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  image: DecorationImage(
+                                                    image: NetworkImage(
+                                                        '${data['title']}'),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              ),
+                                              title: Text(
+                                                  "leading ${data['buyer']}"),
+                                              trailing: IconButton(
+                                                icon: Icon(Icons.arrow_forward),
+                                                onPressed: () {
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    '/chatPage',
+                                                    arguments: {
+                                                      'winningID': user1,
+                                                      'creatorID': user2,
+                                                    },
+                                                  );
+                                                },
+                                              ),
+                                              subtitle: Text(
+                                                "subtitle ${data['lastMessage']}",
+                                              )));
                                     } else {
                                       return Center(
                                         child: Text(
@@ -844,7 +900,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                 Product data = products[index];
                                                 return GestureDetector(
                                                   onTap: () {
-                                                    print(data);
                                                     Navigator.pushNamed(
                                                         context, '/itemScreen',
                                                         arguments: {
@@ -1232,7 +1287,12 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           ],
         ),
       ),
-      //drawer: CustomDrawer(),
+      drawer: CustomDrawer(
+          name: name,
+          balance: balance,
+          onBidHistoryTap: () {
+            _changeTab(4);
+          }),
     );
   }
 }

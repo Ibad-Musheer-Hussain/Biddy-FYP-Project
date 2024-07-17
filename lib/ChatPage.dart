@@ -1,17 +1,22 @@
+import 'package:biddy/List/Product.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class ChatPage extends StatefulWidget {
+  const ChatPage({super.key});
+
   @override
-  _ChatPageState createState() => _ChatPageState();
+  ChatPageState createState() => ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   late String chatRoomId;
   final User? auth = FirebaseAuth.instance.currentUser;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Product? product;
 
   @override
   void didChangeDependencies() {
@@ -22,6 +27,7 @@ class _ChatPageState extends State<ChatPage> {
     String creatorID = arguments['creatorID'] as String;
     chatRoomId = _generateChatRoomId(winnerID, creatorID);
     createAndStoreChatRoom(winnerID, creatorID);
+    /*
     _requestNotificationPermissions();
     _saveDeviceToken();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -29,38 +35,58 @@ class _ChatPageState extends State<ChatPage> {
       if (notification != null) {
         print('Message also contained a notification: ${notification.title}');
       }
-    });
+    });*/
+  }
+
+  Future<String> _getUserName(String userId) async {
+    //for testing using chat1@gmail.com
+    //for testing using chat2@gmail.com
+    String userName = '';
+    try {
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        setState(() {
+          userName = userDoc['name']; // Assuming the field name is 'name'
+          print(userName);
+        });
+        return userName;
+      } else {
+        print('User does not exist');
+        return userName;
+      }
+    } catch (e) {
+      print('Error getting user: $e');
+      return userName;
+    }
   }
 
   Future<void> createAndStoreChatRoom(String winnerID, String creatorID) async {
     DocumentReference userRef =
         FirebaseFirestore.instance.collection('users').doc(auth!.uid);
-
     // Get the user document
+    String buyer = await _getUserName(winnerID);
     DocumentSnapshot userSnapshot = await userRef.get();
-
     if (userSnapshot.exists) {
       Map<String, dynamic>? userData = userSnapshot.data()
           as Map<String, dynamic>?; // Cast to Map<String, dynamic> or null
       List<dynamic> chats = userData?['chats'] ?? [];
-
       // Check if the chat room already exists for the current user
       if (!chats.contains(chatRoomId)) {
         // Create a new document in the 'chatRooms' collection
         DocumentReference newChatRef =
             FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
-
         // Set the chat room data
-        await newChatRef.set({
+        await newChatRef.update({
           'users': [winnerID, creatorID],
+          'buyer': buyer,
+          'seller': await _getUserName(creatorID),
           'createdAt': Timestamp.now(),
         });
-
         // Add the chat room ID to the user's chats array
         chats.add(chatRoomId);
         await userRef.update({'chats': chats});
-
-        print('New chat room created with ID: ${chatRoomId}');
+        print('New chat room created with ID: $chatRoomId');
       } else {
         print('Chat room already exists');
       }
@@ -96,15 +122,23 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _sendMessage() async {
-    if (_controller.text.isNotEmpty) {
+    String lastMessage = _controller.text;
+    _controller.clear();
+    if (lastMessage.isNotEmpty) {
       await FirebaseFirestore.instance
           .collection('chatRooms')
           .doc(chatRoomId)
           .collection('messages')
           .add({
-        'text': _controller.text,
+        'text': lastMessage,
         'createdAt': Timestamp.now(),
         'userId': FirebaseAuth.instance.currentUser!.uid,
+      });
+      DocumentReference newChatRef =
+          FirebaseFirestore.instance.collection('chatRooms').doc(chatRoomId);
+      // Set the chat room data
+      await newChatRef.update({
+        'lastMessage': lastMessage,
       });
       _controller.clear();
       _sendNotificationToOtherUser(FirebaseAuth.instance.currentUser!.uid);
@@ -153,7 +187,7 @@ class _ChatPageState extends State<ChatPage> {
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
                 return ListView.builder(
                   reverse: true,
@@ -180,7 +214,7 @@ class _ChatPageState extends State<ChatPage> {
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      labelText: 'Send a message...',
+                      labelText: 'Create Message',
                       border: OutlineInputBorder(),
                     ),
                   ),

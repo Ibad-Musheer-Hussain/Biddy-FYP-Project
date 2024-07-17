@@ -1,15 +1,23 @@
-// ignore_for_file: file_names, non_constant_identifier_names, avoid_print, prefer_const_constructors, prefer_const_literals_to_create_immutables, use_build_context_synchronously, deprecated_member_use
+// ignore_for_file: file_names, non_constant_identifier_names, avoid_print, prefer_const_constructors, prefer_const_literals_to_create_immutables, use_build_context_synchronously, deprecated_member_use, no_leading_underscores_for_local_identifiers
+
+import 'dart:io';
 
 import 'package:biddy/PickImagesForAd.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:biddy/components/LoginTextField.dart';
 import 'package:biddy/components/NumberField.dart';
+import 'package:biddy/functions/showCustomSnackBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:csv/csv.dart';
+import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_ml_model_downloader/firebase_ml_model_downloader.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class ContinueAd extends StatefulWidget {
   const ContinueAd({Key? key, required this.uploadImagesFuture})
@@ -21,16 +29,17 @@ class ContinueAd extends StatefulWidget {
 }
 
 class _ContinueAdState extends State<ContinueAd> {
-  final TextEditingController brand = TextEditingController();
-  final TextEditingController Year = TextEditingController();
-  final TextEditingController model = TextEditingController();
-  final TextEditingController price = TextEditingController();
-  final TextEditingController kms = TextEditingController();
-  final TextEditingController city = TextEditingController();
-  final TextEditingController description = TextEditingController();
-  final TextEditingController transmission = TextEditingController();
-  final TextEditingController fuel = TextEditingController();
-
+  final brand = TextEditingController(),
+      year = TextEditingController(),
+      model = TextEditingController(),
+      price = TextEditingController(),
+      kms = TextEditingController(),
+      city = TextEditingController(),
+      description = TextEditingController(),
+      transmission = TextEditingController(),
+      fuel = TextEditingController();
+  int _countHondaPristineSoldGreaterThanPoint1 = 0;
+  int _countHondaPristineSoldEqualToZero = 0;
   int selectedDays = 3;
   String titleURL = '';
   List<String> pictureUrls = [];
@@ -40,14 +49,96 @@ class _ContinueAdState extends State<ContinueAd> {
   String CollectionValue = 'SUVs';
   bool isFutureComplete = false;
   Timestamp timestamp = Timestamp(0, 0);
-
   final User? auth = FirebaseAuth.instance.currentUser;
   final CollectionReference adsCollection =
       FirebaseFirestore.instance.collection('Ads');
+  double? probabilitySold;
+  String _csvContent = '';
+
+  Future<void> _downloadCsv() async {
+    try {
+      // Get a reference to the CSV file
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('cars_with_sold_probabilities2.csv');
+
+      // Get the download URL
+      final url = await ref.getDownloadURL();
+
+      // Download the file
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        setState(() {
+          _csvContent = response.body;
+        });
+      } else {
+        throw Exception('Failed to load CSV file');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  void _parseCsv(String csvContent) {
+    final csvData = const CsvToListConverter().convert(csvContent, eol: '\n');
+
+    int countSoldGreaterThanPoint1 = 0;
+    int countSoldEqualToZero = 0;
+
+    // Analyze data to count Honda Pristine sold > 0.1 and sold == 0
+    csvData.skip(1).forEach((row) {
+      final _brand = row[0].toString().trim().toLowerCase();
+      final _condition = row[1].toString().trim().toLowerCase();
+      final _model = row[4].toString().trim().toLowerCase();
+      final soldProbability =
+          double.parse(row[8].toString().trim().toLowerCase());
+
+      if (_brand == brand.text.toLowerCase() &&
+          _condition == 'poor' &&
+          _model == model.text.toLowerCase()) {
+        if (soldProbability > 0.1) {
+          countSoldGreaterThanPoint1++;
+        } else if (soldProbability == 0) {
+          countSoldEqualToZero++;
+        }
+      }
+    });
+
+    setState(() {
+      _countHondaPristineSoldGreaterThanPoint1 = countSoldGreaterThanPoint1;
+      _countHondaPristineSoldEqualToZero = countSoldEqualToZero;
+    });
+
+    _showAlertDialog(
+      context,
+      "Count Results",
+      "${brand.text.toString()} Pristine Sold: $_countHondaPristineSoldGreaterThanPoint1\n${brand.text.toString()} Pristine Sold == 0: $_countHondaPristineSoldEqualToZero",
+    );
+  }
+
+  void _showAlertDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: <Widget>[
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   bool validateform() {
     final regex = RegExp(r'^[19][6-9]\d|20[0-2][0-4]$');
-    if (!regex.hasMatch(Year.text)) {
+    if (!regex.hasMatch(year.text)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
           'Year must be from 1960-2024',
@@ -64,6 +155,146 @@ class _ContinueAdState extends State<ContinueAd> {
     }
 
     return true;
+  }
+
+  Future<void> downloadModelAndPredict() async {
+    FirebaseModelDownloader modelDownloader = FirebaseModelDownloader.instance;
+    FirebaseCustomModel customModel = await modelDownloader.getModel(
+      'BiddyModel',
+      FirebaseModelDownloadType.localModelUpdateInBackground,
+      FirebaseModelDownloadConditions(
+        iosAllowsCellularAccess: false,
+        iosAllowsBackgroundDownloading: false,
+        androidChargingRequired: false,
+        androidWifiRequired: true,
+        androidDeviceIdleRequired: false,
+      ),
+    );
+    final modelPath = customModel.file;
+    // ignore: unnecessary_null_comparison
+    if (modelPath != null) {
+      final result = await predictWithModel(modelPath.path);
+      setState(() {
+        probabilitySold = result;
+        print("final result:");
+        showCustomSnackBar(context, "Final result $probabilitySold");
+        print(probabilitySold);
+      });
+    }
+  }
+
+  Future<double> predictWithModel(String modelPath) async {
+    final interpreter = await Interpreter.fromFile(File(modelPath));
+    final input = createInput();
+    final output = List.filled(1, 0).reshape([1, 1]);
+    interpreter.run(input, output);
+
+    return output[0][0].toDouble();
+  }
+
+  List<double> createInput() {
+    String Brand = brand.text.toLowerCase();
+    String Model = model.text.toLowerCase();
+    bool Brand_Honda;
+    bool Brand_Suzuki;
+    bool Brand_Toyota;
+    bool Model_City;
+    bool Model_Civic;
+    bool Model_Corolla;
+    bool Model_Mehran;
+
+    switch (Brand) {
+      case "honda":
+        Brand_Honda = true;
+        Brand_Suzuki = false;
+        Brand_Toyota = false;
+        break;
+      case "suzuki":
+        Brand_Honda = false;
+        Brand_Suzuki = true;
+        Brand_Toyota = false;
+        break;
+      case "toyota":
+        Brand_Honda = false;
+        Brand_Suzuki = false;
+        Brand_Toyota = true;
+        break;
+      default:
+        Brand_Honda = false;
+        Brand_Suzuki = false;
+        Brand_Toyota = false;
+        print("default activated");
+    }
+
+    switch (Model) {
+      case "city":
+        Model_City = true;
+        Model_Mehran = false;
+        Model_Corolla = false;
+        Model_Civic = false;
+        break;
+      case "civic":
+        Model_City = false;
+        Model_Mehran = false;
+        Model_Corolla = false;
+        Model_Civic = true;
+        break;
+      case "corolla":
+        Model_City = false;
+        Model_Mehran = false;
+        Model_Corolla = true;
+        Model_Civic = false;
+        break;
+      case "mehran":
+        Model_City = false;
+        Model_Mehran = true;
+        Model_Corolla = false;
+        Model_Civic = false;
+        break;
+      default:
+        Model_City = false;
+        Model_Mehran = false;
+        Model_Corolla = false;
+        Model_Civic = false;
+        print("default activated");
+    }
+    late Map<String, Object> data;
+    try {
+      data = {
+        'KMs Driven': double.parse(kms.text.toString()),
+        'Price': double.parse(price.text.toString()),
+        'Year': double.parse(year.text.toString()),
+        'Brand_Honda': Brand_Honda,
+        'Brand_Suzuki': Brand_Suzuki,
+        'Brand_Toyota': Brand_Toyota,
+        'Condition_Fair': false,
+        'Condition_Good': false,
+        'Condition_Poor': true,
+        'Condition_Pristine': false,
+        'Fuel_CNG': false,
+        'Fuel_Petrol': true,
+        'Model_City': Model_City,
+        'Model_Civic': Model_Civic,
+        'Model_Corolla': Model_Corolla,
+        'Model_Mehran': Model_Mehran,
+        'Registered City_Islamabad': false,
+        'Registered City_Karachi': false,
+        'Registered City_Lahore': true,
+      };
+    } catch (e) {
+      showCustomSnackBar(context, "Invalid or Empty Data");
+      return [0.0];
+    }
+
+    return data.values.map((value) {
+      if (value is bool) {
+        return value ? 1.0 : 0.0;
+      } else if (value is num) {
+        return value.toDouble();
+      } else {
+        throw ArgumentError('Unsupported data type: ${value.runtimeType}');
+      }
+    }).toList();
   }
 
   Future<void> processImageData(Future<AdData> uploadImagesFuture) async {
@@ -113,7 +344,7 @@ class _ContinueAdState extends State<ContinueAd> {
         'title': titleURL,
         'brand': brand.text.toString(),
         'model': model.text.toString(),
-        'year': int.tryParse(Year.text.toString()),
+        'year': int.tryParse(year.text.toString()),
         'price': int.tryParse(price.text.toString()),
         'kms': int.tryParse(kms.text.toString()),
         'transmission': transmission.text.toString(),
@@ -135,7 +366,6 @@ class _ContinueAdState extends State<ContinueAd> {
           .doc(documentId) // Use the custom document ID
           .set(data);
 
-      // Add data to the Realtime Database
       await FirebaseDatabase.instance
           .reference()
           .child('adsCollection')
@@ -151,6 +381,12 @@ class _ContinueAdState extends State<ContinueAd> {
     } catch (error) {
       print('Failed to add car ad: $error');
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _downloadCsv();
   }
 
   @override
@@ -181,7 +417,7 @@ class _ContinueAdState extends State<ContinueAd> {
               );
             }),
             Text(
-              "Create Ad",
+              "Create Your Ad",
               style: TextStyle(color: Colors.white),
             ),
             IconButton(
@@ -209,7 +445,7 @@ class _ContinueAdState extends State<ContinueAd> {
             Center(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 28.0),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -320,7 +556,7 @@ class _ContinueAdState extends State<ContinueAd> {
                               endIndent: 16,
                             ),
                             NumberField(
-                              textEditingController: Year,
+                              textEditingController: year,
                               hintText: "Year",
                               obscureText: false,
                             ),
@@ -420,6 +656,27 @@ class _ContinueAdState extends State<ContinueAd> {
                           height: 15,
                         ),
                         Container(
+                          padding: EdgeInsets.all(16.0),
+                          child: FABcustom(
+                              onTap: () {
+                                downloadModelAndPredict();
+                              },
+                              text: "Predict"),
+                        ),
+                        Container(
+                          padding: EdgeInsets.all(16.0),
+                          child: FABcustom(
+                              onTap: () {
+                                if (_csvContent != '') {
+                                  _parseCsv(_csvContent);
+                                } else {
+                                  showCustomSnackBar(context,
+                                      "Please wait while we gather insights");
+                                }
+                              },
+                              text: "Get Insights"),
+                        ),
+                        Container(
                             padding: EdgeInsets.all(16.0),
                             child: isFutureComplete
                                 ? FABcustom(
@@ -437,7 +694,7 @@ class _ContinueAdState extends State<ContinueAd> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(12),
-                                        color: Colors.pink,
+                                        color: Colors.grey,
                                       ),
                                       child: Padding(
                                         padding: const EdgeInsets.fromLTRB(
