@@ -283,7 +283,7 @@ class _ContinueaccountState extends State<Continueaccount> {
                 }
               },
               child: Text(
-                'Continue',
+                'Finalize Account',
                 style: TextStyle(fontSize: 18.0),
               ),
               style: ElevatedButton.styleFrom(

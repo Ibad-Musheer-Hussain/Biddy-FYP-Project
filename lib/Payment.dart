@@ -30,7 +30,7 @@ class _PaymentState extends State<Payment> {
               width: MediaQuery.of(context).size.width / 1.5,
               child: Center(
                 child: Text(
-                  'Add Cash',
+                  'Add Balance',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 24, color: Colors.white),
                 ),

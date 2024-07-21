@@ -269,7 +269,17 @@ class _CreateAdState extends State<CreateAd> {
               style: TextStyle(color: Colors.white),
             ),
             IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Future<AdData> uploadImagesFuture =
+                      _uploadImages(); // Get the future
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ContinueAdBetter(
+                          uploadImagesFuture: uploadImagesFuture),
+                    ),
+                  );
+                },
                 icon: Icon(Icons.arrow_forward),
                 color: Colors.white)
           ],

@@ -5,6 +5,44 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
+Future<void> addToHistory(String productId, String? userId) async {
+  try {
+    // Get the reference to the user document
+    DocumentReference userRef =
+        FirebaseFirestore.instance.collection('users').doc(userId);
+
+    // Get the current history list
+    DocumentSnapshot userSnapshot = await userRef.get();
+
+    // Check if the 'history' field exists in the document
+    if (userSnapshot.exists &&
+        (userSnapshot.data() as Map<String, dynamic>).containsKey('history') &&
+        (userSnapshot.data() as Map<String, dynamic>)['history']
+            is List<dynamic> &&
+        (userSnapshot.data() as Map<String, dynamic>)['history'].isNotEmpty) {
+      List<String> history = List<String>.from((userSnapshot.data() as Map<
+          String, dynamic>)['history']); // Get the existing favorites list
+
+      // Add the new product ID to the favorites list
+      history.add(productId);
+
+      // Update the user document with the updated favorites list
+      await userRef.update({'history': history});
+
+      print('Product added to history successfully');
+    } else {
+      // If the 'history' field does not exist or is empty, create it with the new product ID
+      await userRef.set({
+        'history': [productId]
+      }, SetOptions(merge: true));
+
+      print('Created history list and added product successfully');
+    }
+  } catch (error) {
+    print('Failed to add product to history: $error');
+  }
+}
+
 void BidDialog(
     BuildContext context, Product products, int price, User auth) async {
   return showDialog(
@@ -64,13 +102,14 @@ void BidDialog(
                 },
               ),
               TextButton(
-                child: Text('Approve'),
+                child: Text('Place Bid'),
                 onPressed: () {
                   int combinedNumber = int.parse(numbers.join());
                   if (combinedNumber > price) {
                     updateCarPrice(products.id, products.price,
                         products.collectionValue, auth, combinedNumber);
                     showCustomSnackBar(context, "Your bid is being processed");
+                    addToHistory(products.id, auth.uid);
                     Navigator.of(context).pop();
                   } else {
                     showCustomSnackBar(
@@ -105,7 +144,6 @@ List<int> convertToDigitList(int number) {
 Future<void> updateCarPrice(String adId, int price, String collectionAddress,
     User user, int combinedNumber) async {
   try {
-
     DocumentReference adRefFirestore = FirebaseFirestore.instance
         .collection('Ads')
         .doc('Cars')

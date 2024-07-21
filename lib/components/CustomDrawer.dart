@@ -74,7 +74,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
               'Your Profile',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/profile');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.ad_units),
@@ -82,7 +84,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
               'Your Ads',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/YourAds');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.history),
@@ -109,7 +113,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
               'Help',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/help');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.feedback),
@@ -120,7 +126,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             onTap: () {},
           ),
           Expanded(
-            child: Container(), // Empty container to fill remaining space
+            child: Container(), 
           ),
           ListTile(
             leading: const Icon(

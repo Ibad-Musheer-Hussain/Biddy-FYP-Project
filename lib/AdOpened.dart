@@ -15,6 +15,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:biddy/functions/openimagenetwork.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 class ItemsScreen extends StatefulWidget {
   const ItemsScreen({super.key});
@@ -33,9 +35,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
   String address = '';
   bool timerIsNegative = false;
   late Timer _timer;
+  bool isbalance = true;
   final Duration _remainingTime = const Duration();
   late String role;
   final User? auth = FirebaseAuth.instance.currentUser;
+  int currenttime = 0;
+  bool isLoading = true;
 
   @override
   void didChangeDependencies() {
@@ -162,44 +167,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
     }
   }
 
-  Future<void> addToHistory(String productId, String? userId) async {
-    try {
-      // Get the reference to the user document
-      DocumentReference userRef =
-          FirebaseFirestore.instance.collection('users').doc(userId);
 
-      // Get the current history list
-      DocumentSnapshot userSnapshot = await userRef.get();
-
-      // Check if the 'history' field exists in the document
-      if (userSnapshot.exists &&
-          (userSnapshot.data() as Map<String, dynamic>)
-              .containsKey('history') &&
-          (userSnapshot.data() as Map<String, dynamic>)['history']
-              is List<dynamic> &&
-          (userSnapshot.data() as Map<String, dynamic>)['history'].isNotEmpty) {
-        List<String> history = List<String>.from((userSnapshot.data() as Map<
-            String, dynamic>)['history']); // Get the existing favorites list
-
-        // Add the new product ID to the favorites list
-        history.add(productId);
-
-        // Update the user document with the updated favorites list
-        await userRef.update({'history': history});
-
-        print('Product added to history successfully');
-      } else {
-        // If the 'history' field does not exist or is empty, create it with the new product ID
-        await userRef.set({
-          'history': [productId]
-        }, SetOptions(merge: true));
-
-        print('Created history list and added product successfully');
-      }
-    } catch (error) {
-      print('Failed to add product to history: $error');
-    }
-  }
 
   Future<void> isProductInFavorites(String productId, String? userId) async {
     try {
@@ -230,9 +198,31 @@ class _ItemsScreenState extends State<ItemsScreen> {
     }
   }
 
+  int storeTimestamp() {
+    tz.initializeTimeZones();
+    DateTime now = DateTime.now();
+    String karachiTimeZone = 'Asia/Karachi';
+    tz.Location karachiLocation = tz.getLocation(karachiTimeZone);
+    tz.TZDateTime karachiTime = tz.TZDateTime.from(now, karachiLocation);
+    Timestamp timestamp = Timestamp.fromDate(karachiTime);
+    int timestampMillis = timestamp.millisecondsSinceEpoch;
+    print('Timestamp stored successfully!');
+    return timestampMillis;
+  }
+
+  Future<void> _simulateLoadingDelay() async {
+    await Future.delayed(Duration(seconds: 2));
+    setState(() {
+      isLoading = false; // Toggle isLoading to false after delay
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _simulateLoadingDelay();
+    updatebalance(auth!, context);
+    currenttime = storeTimestamp();
     _startCountdown();
   }
 
@@ -349,6 +339,21 @@ class _ItemsScreenState extends State<ItemsScreen> {
     });
   }
 
+  updatebalance(User user, BuildContext context) async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    var data = doc.data() as Map<String, dynamic>;
+    int balance = data['balance'];
+    print(balance);
+    if (balance > 100) {
+      isbalance = true;
+    } else {
+      isbalance = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Map<String, dynamic>? arguments =
@@ -409,475 +414,507 @@ class _ItemsScreenState extends State<ItemsScreen> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-              child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: Color.fromARGB(255, 228, 129, 142),
+              ),
+            )
+          : Column(
               children: [
-                Row(
-                  //For images
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        height: 200,
-                        width: MediaQuery.of(context).size.width,
-                        child: products.uploadedImageUrls.isEmpty
-                            ? Center(
-                                child: Container(
-                                  child: GestureDetector(
-                                    onTap: () {}, //_getImages,
-                                    child: Image.asset(
-                                      'lib/images/download.png',
-                                      width: 250,
-                                      height: 250,
-                                      fit: BoxFit.fill,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: products.uploadedImageUrls.length +
-                                    1, // Add 1 for the extra item
-                                itemBuilder: (context, index) {
-                                  if (index == 0) {
-                                    // Display the extra item at index 0
-                                    return GestureDetector(
-                                      onTap: () {
-                                        openFullSizeImage(
-                                          products
-                                              .title, // Adjust index for the list
-                                          context,
-                                        );
-                                      },
-                                      onLongPress: () {},
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Container(
-                                          width: 250,
-                                          height: 200,
-                                          child: Image.network(
-                                            products.title,
-                                            width: 300,
+                Expanded(
+                    child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        //For images
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              height: 200,
+                              width: MediaQuery.of(context).size.width,
+                              child: products.uploadedImageUrls.isEmpty
+                                  ? Center(
+                                      child: Container(
+                                        child: GestureDetector(
+                                          onTap: () {}, //_getImages,
+                                          child: Image.asset(
+                                            'lib/images/download.png',
+                                            width: 250,
+                                            height: 250,
                                             fit: BoxFit.fill,
-                                            frameBuilder: (BuildContext context,
-                                                Widget child,
-                                                int? frame,
-                                                bool wasSynchronouslyLoaded) {
-                                              if (frame != null) {
-                                                return child; // Return the image if frame is not null (indicating loaded)
-                                              } else {
-                                                return Shimmer.fromColors(
-                                                  baseColor: Colors.grey[300]!,
-                                                  highlightColor:
-                                                      Colors.grey[100]!,
-                                                  child: Container(
-                                                      color: Colors.white),
-                                                ); // Show shimmer effect while the image is loading
-                                              }
-                                            },
-                                            loadingBuilder:
-                                                (BuildContext context,
-                                                    Widget child,
-                                                    ImageChunkEvent?
-                                                        loadingProgress) {
-                                              if (loadingProgress == null) {
-                                                return child; // Return the image if loading is complete
-                                              } else {
-                                                return child; // Return the image with loading progress if it's still loading
-                                              }
-                                            },
                                           ),
                                         ),
                                       ),
-                                    );
-                                  } else {
-                                    // Display other items from the list
-                                    return GestureDetector(
-                                      onTap: () {
-                                        print(products.uploadedImageUrls[index -
-                                            1]); // Adjust index for the list
-                                        openFullSizeImage(
-                                          products.uploadedImageUrls[index -
-                                              1], // Adjust index for the list
-                                          context,
-                                        );
+                                    )
+                                  : ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount:
+                                          products.uploadedImageUrls.length +
+                                              1, // Add 1 for the extra item
+                                      itemBuilder: (context, index) {
+                                        if (index == 0) {
+                                          // Display the extra item at index 0
+                                          return GestureDetector(
+                                            onTap: () {
+                                              openFullSizeImage(
+                                                products
+                                                    .title, // Adjust index for the list
+                                                context,
+                                              );
+                                            },
+                                            onLongPress: () {},
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Container(
+                                                width: 250,
+                                                height: 200,
+                                                child: Image.network(
+                                                  products.title,
+                                                  width: 300,
+                                                  fit: BoxFit.fill,
+                                                  frameBuilder: (BuildContext
+                                                          context,
+                                                      Widget child,
+                                                      int? frame,
+                                                      bool
+                                                          wasSynchronouslyLoaded) {
+                                                    if (frame != null) {
+                                                      return child; // Return the image if frame is not null (indicating loaded)
+                                                    } else {
+                                                      return Shimmer.fromColors(
+                                                        baseColor:
+                                                            Colors.grey[300]!,
+                                                        highlightColor:
+                                                            Colors.grey[100]!,
+                                                        child: Container(
+                                                            color:
+                                                                Colors.white),
+                                                      ); // Show shimmer effect while the image is loading
+                                                    }
+                                                  },
+                                                  loadingBuilder:
+                                                      (BuildContext context,
+                                                          Widget child,
+                                                          ImageChunkEvent?
+                                                              loadingProgress) {
+                                                    if (loadingProgress ==
+                                                        null) {
+                                                      return child; // Return the image if loading is complete
+                                                    } else {
+                                                      return child; // Return the image with loading progress if it's still loading
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          // Display other items from the list
+                                          return GestureDetector(
+                                            onTap: () {
+                                              print(products.uploadedImageUrls[
+                                                  index -
+                                                      1]); // Adjust index for the list
+                                              openFullSizeImage(
+                                                products.uploadedImageUrls[index -
+                                                    1], // Adjust index for the list
+                                                context,
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Image.network(
+                                                products.uploadedImageUrls[index -
+                                                    1], // Adjust index for the list
+                                                width: 250,
+                                                height: 200,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          );
+                                        }
                                       },
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Image.network(
-                                          products.uploadedImageUrls[index -
-                                              1], // Adjust index for the list
-                                          width: 250,
-                                          height: 200,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                              )),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Text(
-                    '$price',
-                    style: TextStyle(fontSize: 24),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(0.0),
-                  child: CustomExpansionTile(
-                    //initiallyExpanded: true,
-                    title: Text(
-                      'Product Description',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text(
-                        products.description,
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(0.0),
-                  child: CustomExpansionTile(
-                    title: const Text(
-                      'Product Specifications',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Table(
-                        border: TableBorder.all(),
-                        children: [
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('Brand'),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(products.brand),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text("Price"),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('${products.price}'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('Model'),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(products.model),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('Fuel'),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(products.fuel),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('KMs Driven'),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('${products.kms}'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('Transmission'),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(products.transmission),
-                                ),
-                              ),
-                            ],
-                          ),
-                          TableRow(
-                            children: [
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('City'),
-                                ),
-                              ),
-                              TableCell(
-                                child: Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(products.city),
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Copy tablerow for more rows
+                                    )),
                         ],
                       ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 18),
-                  child: Text(
-                    "Related Products",
-                    style: TextStyle(fontSize: 24),
-                  ),
-                ),
-                Container(
-                    height: 390,
-                    child: StreamBuilder<List<QuerySnapshot>>(
-                      stream: mergeStreams(),
-                      builder: (context, snapshot) {
-                        // Merge all snapshots into a single list
-                        List<DocumentSnapshot> allSnapshots = [];
-                        for (var snapList in snapshot.data!) {
-                          allSnapshots.addAll(snapList.docs);
-                        }
-                        // Filter documents based on search query
-                        final filteredDocs = allSnapshots.where((doc) {
-                          final vehicleName =
-                              doc['brand'].toString().toLowerCase();
-                          final price = doc['price']
-                              as int; // Assuming price is stored as an integer
-                          final year = doc['year']
-                              as int; // Assuming year is stored as an integer
-                          final time = doc['timestamp2'];
-                          return vehicleName.contains("");
-                        }).toList();
-
-                        if (filteredDocs.isEmpty) {
-                          return Center(
-                            child: Container(
-                              width: 300,
-                              child: Text(
-                                  'No results found. Try changing or resetting the filter settings'),
-                            ),
-                          );
-                        }
-                        return ListView.builder(
-                          itemCount: filteredDocs.length,
-                          scrollDirection: Axis.horizontal,
-                          itemBuilder: (context, index) {
-                            final DocumentSnapshot document =
-                                filteredDocs[index];
-                            final List<dynamic>
-                                picsDynamic = //this shit is very imp
-                                document['pics'] ?? [];
-                            final List<String> uploadedImageUrls2 = picsDynamic
-                                .map((pic) => pic.toString())
-                                .toList();
-                            Product product = Product(
-                              brand: document['brand'],
-                              model: document['model'],
-                              year: document['year'],
-                              title: document['title'],
-                              id: document['id'],
-                              price: document['price'],
-                              kms: document['kms'],
-                              city: document['city'],
-                              creatorID: document['creatorID'],
-                              winningid: document['winningid'],
-                              transmission: document['transmission'],
-                              fuel: document['fuel'],
-                              description: 'change',
-                              collectionValue: document['collectionValue'],
-                              timestamp: document['timestamp'],
-                              timestamp2: document['timestamp2'],
-                              uploadedImageUrls: uploadedImageUrls2,
-                            );
-                            return GestureDetector(
-                              onTap: () {
-                                flag = 0;
-                                if (auth != null) {
-                                  Navigator.pushNamed(context, '/itemScreen',
-                                      arguments: {
-                                        'product': product,
-                                        'id': product.id
-                                      });
-                                } else {
-                                  _showLoginDialog(context);
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Card.filled(
-                                  color: Colors.transparent,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        height: 10,
-                                      ),
-                                      Expanded(
-                                        child: Center(
-                                          child: Container(
-                                            height: 270,
-                                            width: 320,
-                                            child: Stack(
-                                              fit: StackFit.expand,
-                                              children: [
-                                                Image.network(
-                                                  product.title,
-                                                  width: 300,
-                                                  height: 270,
-                                                  fit: BoxFit.fill,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8.0, vertical: 8),
-                                        child: Text(
-                                          product.model,
-                                          style: TextStyle(fontSize: 18),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8.0, vertical: 8),
-                                        child: Text(
-                                          '${product.price}',
-                                          style: const TextStyle(fontSize: 18),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ))
-              ],
-            ),
-          )),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                !timerIsNegative
-                    ? Text(
-                        formattedTime,
-                        style: const TextStyle(fontSize: 24),
-                      )
-                    : isWinner(auth!, products)
-                        ? Text(
-                            "You Won!",
-                            style: const TextStyle(fontSize: 24),
-                          )
-                        : Text(
-                            "Bid Expired",
-                            style: const TextStyle(fontSize: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Text(
+                          '$price',
+                          style: TextStyle(fontSize: 24),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: CustomExpansionTile(
+                          //initiallyExpanded: true,
+                          title: Text(
+                            'Product Description',
+                            style: TextStyle(fontSize: 24),
                           ),
-                Container(
-                  width: 150,
-                  child: !timerIsNegative
-                      ? (products.creatorID != auth?.uid)
-                          ? FABcustom(
-                              onTap: () {
-                                bool isUserLoggedin = (auth != null);
-                                if (isUserLoggedin) {
-                                  BidDialog(context, products, price, auth!);
-                                  addToHistory(products.id, auth!.uid);
-                                } else {
-                                  _showLoginDialog(context);
-                                }
-                              },
-                              text: "Bid",
-                            )
-                          : FABcustom(
-                              onTap: () {
-                                showCustomSnackBar(
-                                    context, "Sorry, you cant bid on your ad");
-                              },
-                              text: "Restricted",
-                            )
-                      : isWinner(auth!, products)
-                          ? FABcustom(
-                              onTap: () {
-                                toChat(products);
-                              },
-                              text: "Go to Chat",
-                            )
-                          : FABcustom(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                              },
-                              text: "Go back",
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(
+                              products.description,
+                              style: TextStyle(fontSize: 18),
                             ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: CustomExpansionTile(
+                          title: const Text(
+                            'Product Specifications',
+                            style: TextStyle(fontSize: 24),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Table(
+                              border: TableBorder.all(),
+                              children: [
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Brand'),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(products.brand),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text("Price"),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('${products.price}'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Model'),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(products.model),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Fuel'),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(products.fuel),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('KMs Driven'),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('${products.kms}'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Transmission'),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(products.transmission),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                TableRow(
+                                  children: [
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('City'),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(products.city),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Copy tablerow for more rows
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 18),
+                        child: Text(
+                          "Related Products",
+                          style: TextStyle(fontSize: 24),
+                        ),
+                      ),
+                      Container(
+                          height: 390,
+                          child: StreamBuilder<List<QuerySnapshot>>(
+                            stream: mergeStreams(),
+                            builder: (context, snapshot) {
+                              // Merge all snapshots into a single list
+                              List<DocumentSnapshot> allSnapshots = [];
+                              for (var snapList in snapshot.data!) {
+                                allSnapshots.addAll(snapList.docs);
+                              }
+                              // Filter documents based on search query
+                              final filteredDocs = allSnapshots.where((doc) {
+                                final vehicleName =
+                                    doc['brand'].toString().toLowerCase();
+                                final price = doc['price']
+                                    as int; // Assuming price is stored as an integer
+                                final year = doc['year']
+                                    as int; // Assuming year is stored as an integer
+                                final time = doc['timestamp2'];
+                                return vehicleName.contains("") &&
+                                    time > currenttime;
+                              }).toList();
+
+                              if (filteredDocs.isEmpty) {
+                                return Center(
+                                  child: Container(
+                                    width: 300,
+                                    child: Text(
+                                        'No results found. Try changing or resetting the filter settings'),
+                                  ),
+                                );
+                              }
+                              return ListView.builder(
+                                itemCount: filteredDocs.length,
+                                scrollDirection: Axis.horizontal,
+                                itemBuilder: (context, index) {
+                                  final DocumentSnapshot document =
+                                      filteredDocs[index];
+                                  final List<dynamic>
+                                      picsDynamic = //this shit is very imp
+                                      document['pics'] ?? [];
+                                  final List<String> uploadedImageUrls2 =
+                                      picsDynamic
+                                          .map((pic) => pic.toString())
+                                          .toList();
+                                  Product product = Product(
+                                    brand: document['brand'],
+                                    model: document['model'],
+                                    year: document['year'],
+                                    title: document['title'],
+                                    id: document['id'],
+                                    price: document['price'],
+                                    kms: document['kms'],
+                                    city: document['city'],
+                                    creatorID: document['creatorID'],
+                                    winningid: document['winningid'],
+                                    transmission: document['transmission'],
+                                    fuel: document['fuel'],
+                                    description: 'change',
+                                    collectionValue:
+                                        document['collectionValue'],
+                                    timestamp: document['timestamp'],
+                                    timestamp2: document['timestamp2'],
+                                    uploadedImageUrls: uploadedImageUrls2,
+                                  );
+                                  return GestureDetector(
+                                    onTap: () {
+                                      flag = 0;
+                                      if (auth != null) {
+                                        Navigator.pushNamed(
+                                            context, '/itemScreen', arguments: {
+                                          'product': product,
+                                          'id': product.id
+                                        });
+                                      } else {
+                                        _showLoginDialog(context);
+                                      }
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Card.filled(
+                                        color: Colors.transparent,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(
+                                              height: 10,
+                                            ),
+                                            Expanded(
+                                              child: Center(
+                                                child: Container(
+                                                  height: 270,
+                                                  width: 320,
+                                                  child: Stack(
+                                                    fit: StackFit.expand,
+                                                    children: [
+                                                      Image.network(
+                                                        product.title,
+                                                        width: 300,
+                                                        height: 270,
+                                                        fit: BoxFit.fill,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8.0,
+                                                      vertical: 8),
+                                              child: Text(
+                                                product.model,
+                                                style: TextStyle(fontSize: 18),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8.0,
+                                                      vertical: 8),
+                                              child: Text(
+                                                '${product.price}',
+                                                style: const TextStyle(
+                                                    fontSize: 18),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ))
+                    ],
+                  ),
+                )),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      !timerIsNegative
+                          ? Text(
+                              formattedTime,
+                              style: const TextStyle(fontSize: 24),
+                            )
+                          : isWinner(auth!, products)
+                              ? Text(
+                                  "You Won!",
+                                  style: const TextStyle(fontSize: 24),
+                                )
+                              : Text(
+                                  "Bid Expired",
+                                  style: const TextStyle(fontSize: 24),
+                                ),
+                      Container(
+                        width: 150,
+                        child: !timerIsNegative
+                            ? (products.creatorID != auth?.uid)
+                                ? FABcustom(
+                                    onTap: () {
+                                      bool isUserLoggedin = (auth != null);
+                                      updatebalance(auth!, context);
+                                      print(isbalance);
+                                      if (isUserLoggedin) {
+                                        if (isbalance) {
+                                          BidDialog(
+                                              context, products, price, auth!);
+                                          
+                                        } else {
+                                          showCustomSnackBar(context,
+                                              "Please recharge your account to Bid");
+                                        }
+                                      } else {
+                                        _showLoginDialog(context);
+                                      }
+                                    },
+                                    text: "Bid",
+                                  )
+                                : FABcustom(
+                                    onTap: () {
+                                      showCustomSnackBar(context,
+                                          "Sorry, you cant bid on your ad");
+                                    },
+                                    text: "Restricted",
+                                  )
+                            : isWinner(auth!, products)
+                                ? FABcustom(
+                                    onTap: () {
+                                      toChat(products);
+                                    },
+                                    text: "Go to Chat",
+                                  )
+                                : FABcustom(
+                                    onTap: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    text: "Go back",
+                                  ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

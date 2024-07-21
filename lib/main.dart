@@ -3,14 +3,16 @@ import 'package:biddy/Easypaisa.dart';
 import 'package:biddy/ContinueAccount.dart';
 import 'package:biddy/Jazzcash.dart';
 import 'package:biddy/Payment.dart';
+import 'package:biddy/Profile.dart';
+import 'package:biddy/YourAds.dart';
 import 'package:biddy/card.dart';
 import 'package:biddy/chatPage.dart';
 import 'package:biddy/Signing.dart';
-//import 'package:biddy/ContinueAd.dart';
 import 'package:biddy/PickImagesForAd.dart';
 import 'package:biddy/MainScreen.dart';
 import 'package:biddy/AdOpened.dart';
 import 'package:biddy/circleavatar.dart';
+import 'package:biddy/components/Help.dart';
 import 'package:biddy/test.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -50,9 +52,13 @@ class MyApp extends StatelessWidget {
         '/jazzcash': (context) => Jazzcash(),
         '/circleavatar': (context) => CircleAvatarFromGallery(),
         '/creditcard': (context) => CreditCardForm(),
-        '/finalizeaccount': (context) => Continueaccount()
+        '/finalizeaccount': (context) => Continueaccount(),
+        '/profile': (context) => Profile(),
+        '/YourAds': (context) => Yourads(),
+        '/help': (context) => Help()
       },
       home: MainPage(),
     );
   }
 }
+// when signed out clicking on avatar directly leads to login page

@@ -112,7 +112,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         if (snapshot.exists) {
           chatrooms.add(snapshot);
           chatsadded.add(chatId);
-
         }
       });
     }
@@ -146,7 +145,9 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         historyactive = false;
         _homeactive = false;
         if (user != null) {
+          _changeTab(0);
           Navigator.pushNamed(context, '/CreateAd');
+          _changeTab(0);
         } else {
           index = 0;
           _changeTab(index);
@@ -405,7 +406,12 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                   login();
                   _scaffoldKey.currentState?.openDrawer();
                 } else {
-                  _showLoginDialog(context);
+                  //_showLoginDialog(context);
+                  Navigator.pushNamed(
+                    context,
+                    '/LoginPage',
+                    arguments: {},
+                  );
                 }
               },
               child: CircleAvatar(
@@ -496,8 +502,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                   ),
                                                 ),
                                               ),
-                                              title: Text(
-                                                  "leading ${data['buyer']}"),
+                                              title: Text("${data['buyer']}"),
                                               trailing: IconButton(
                                                 icon: Icon(Icons.arrow_forward),
                                                 onPressed: () {
@@ -512,7 +517,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                 },
                                               ),
                                               subtitle: Text(
-                                                "subtitle ${data['lastMessage']}",
+                                                "Me: ${data['lastMessage']}",
                                               )));
                                     } else {
                                       return Center(

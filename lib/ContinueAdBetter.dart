@@ -38,6 +38,8 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
   List<String> pictureUrls = [];
   String dropdownValue = '3 Days';
   String CollectionValue = 'Sedan';
+  String ConditionValue = 'Pristine';
+  String TransmissionValue = 'Automatic';
   bool isFutureComplete = false;
   Timestamp timestamp = Timestamp(0, 0);
   final User? auth = FirebaseAuth.instance.currentUser;
@@ -78,15 +80,16 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
 
     csvData.skip(1).forEach((row) {
       final _brand = row[0].toString().trim().toLowerCase();
+      // ignore: unused_local_variable
       final _condition = row[1].toString().trim().toLowerCase();
       final _model = row[4].toString().trim().toLowerCase();
       final price = double.parse(row[5].toString().trim().toLowerCase());
       pricelower =
           int.tryParse(formKey.currentState?.fields['Starting Price']?.value)! -
-              40000;
+              10000;
       pricehigher =
           int.tryParse(formKey.currentState?.fields['Starting Price']?.value)! +
-              400000;
+              100000;
       final soldProbability =
           double.parse(row[8].toString().trim().toLowerCase());
 
@@ -114,11 +117,16 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
       _countHondaPristineSoldEqualToZero = countSoldEqualToZero;
     });
 
-    _showAlertDialog(
-      context,
-      "Count Results",
-      "${formKey.currentState?.fields['Brand']?.value} Sold from price range $pricelower - $pricehigher ${formKey.currentState?.fields['Model']?.value}: $_countHondaPristineSoldGreaterThanPoint1\n${formKey.currentState?.fields['Brand']?.value} ${formKey.currentState?.fields['Model']?.value} not Sold: $_countHondaPristineSoldEqualToZero",
-    );
+    if (countSoldGreaterThanPoint1 == 0 && countSoldEqualToZero == 0) {
+      _showAlertDialog(context, "Count Results",
+          "This model is not present in our data set");
+    } else {
+      _showAlertDialog(
+        context,
+        "Count Results",
+        "${formKey.currentState?.fields['Brand']?.value} Sold from price range $pricelower - $pricehigher ${formKey.currentState?.fields['Model']?.value}: $_countHondaPristineSoldGreaterThanPoint1\n${formKey.currentState?.fields['Brand']?.value} ${formKey.currentState?.fields['Model']?.value} not Sold: $_countHondaPristineSoldEqualToZero",
+      );
+    }
   }
 
   void _showAlertDialog(BuildContext context, String title, String content) {
@@ -146,13 +154,6 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
     FirebaseCustomModel customModel = await modelDownloader.getModel(
       'BiddyModel',
       FirebaseModelDownloadType.localModelUpdateInBackground,
-      FirebaseModelDownloadConditions(
-        iosAllowsCellularAccess: false,
-        iosAllowsBackgroundDownloading: false,
-        androidChargingRequired: false,
-        androidWifiRequired: true,
-        androidDeviceIdleRequired: false,
-      ),
     );
     final modelPath = customModel.file;
     // ignore: unnecessary_null_comparison
@@ -338,7 +339,7 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
         'id': documentId,
         'winningid': '',
         'creatorID': auth?.uid,
-        'fuel': "Change in ContinueAD better",
+        'fuel': "petrol",
         'description': description.text.toString(),
         'collectionValue': CollectionValue,
         'timestamp': timestampMillis, // Use Timestamp object
@@ -378,7 +379,6 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
       Userads.add(documentId);
       await userRef.update({
         'Userads': Userads,
-        'history': history,
       });
 
       print('Car ad added to Firestore and Realtime Database');
@@ -609,6 +609,143 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                               ),
                               Padding(
                                 padding: const EdgeInsets.all(16.0),
+                                child: FormBuilderDropdown<String>(
+                                  name: "Car Fuel",
+                                  decoration: const InputDecoration(
+                                      labelText: 'Car Fuel',
+                                      labelStyle: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 18.0,
+                                      ),
+                                      focusedBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.pink,
+                                          width: 3.0,
+                                        ),
+                                      ),
+                                      enabledBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.pink,
+                                          width: 2.0,
+                                        ),
+                                      )),
+                                  dropdownColor:
+                                      Color.fromARGB(255, 255, 218, 223),
+                                  initialValue: "Petrol",
+                                  borderRadius: BorderRadius.circular(12),
+                                  items: [
+                                    'Petrol',
+                                    'Diesel',
+                                    'Electric',
+                                    'PHEV'
+                                  ]
+                                      .map(
+                                          (Collectionvalue) => DropdownMenuItem(
+                                                value: Collectionvalue,
+                                                child: Text(Collectionvalue),
+                                                onTap: () {
+                                                  setState(() {
+                                                    CollectionValue =
+                                                        Collectionvalue;
+                                                    print(CollectionValue);
+                                                  });
+                                                },
+                                              ))
+                                      .toList(),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: FormBuilderDropdown<String>(
+                                  name: "Car Condition",
+                                  decoration: const InputDecoration(
+                                      labelText: 'Car Condition',
+                                      labelStyle: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 18.0,
+                                      ),
+                                      focusedBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.pink,
+                                          width: 3.0,
+                                        ),
+                                      ),
+                                      enabledBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.pink,
+                                          width: 2.0,
+                                        ),
+                                      )),
+                                  dropdownColor:
+                                      Color.fromARGB(255, 255, 218, 223),
+                                  initialValue: "Pristine",
+                                  borderRadius: BorderRadius.circular(12),
+                                  items: [
+                                    'Pristine',
+                                    'Good',
+                                    'Fair',
+                                    'Poor',
+                                  ]
+                                      .map((Conditionvalue) => DropdownMenuItem(
+                                            value: Conditionvalue,
+                                            child: Text(Conditionvalue),
+                                            onTap: () {
+                                              setState(() {
+                                                Conditionvalue = Conditionvalue;
+                                                print(Conditionvalue);
+                                              });
+                                            },
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: FormBuilderDropdown<String>(
+                                  name: "Transmission",
+                                  decoration: const InputDecoration(
+                                      labelText: 'Transmission',
+                                      labelStyle: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 18.0,
+                                      ),
+                                      focusedBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.pink,
+                                          width: 3.0,
+                                        ),
+                                      ),
+                                      enabledBorder: UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.pink,
+                                          width: 2.0,
+                                        ),
+                                      )),
+                                  dropdownColor:
+                                      Color.fromARGB(255, 255, 218, 223),
+                                  initialValue: "Automatic",
+                                  borderRadius: BorderRadius.circular(12),
+                                  items: [
+                                    'Automatic',
+                                    'Manual',
+                                  ]
+                                      .map((TransmissionValue) =>
+                                          DropdownMenuItem(
+                                            value: TransmissionValue,
+                                            child: Text(TransmissionValue),
+                                            onTap: () {
+                                              setState(() {
+                                                TransmissionValue =
+                                                    TransmissionValue;
+                                                print(TransmissionValue);
+                                              });
+                                            },
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
                                 child: FormBuilderTextField(
                                   keyboardType: TextInputType.number,
                                   name: "Year",
@@ -638,7 +775,13 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                                   validator: FormBuilderValidators.compose([
                                     FormBuilderValidators.required(
                                         errorText: "Year cannot be empty"),
-                                    FormBuilderValidators.numeric()
+                                    FormBuilderValidators.numeric(),
+                                    FormBuilderValidators.max(2024,
+                                        errorText:
+                                            "Price should be equal or lesser than 2024"),
+                                    FormBuilderValidators.min(1990,
+                                        errorText:
+                                            "Price should be equal or greater than 1990")
                                   ]),
                                 ),
                               ),
@@ -806,7 +949,12 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                             padding: EdgeInsets.all(16.0),
                             child: FABcustom(
                                 onTap: () {
-                                  downloadModelAndPredict();
+                                  if (formKey.currentState?.saveAndValidate() ??
+                                      false) {
+                                    downloadModelAndPredict();
+                                  } else {
+                                    showCustomSnackBar(context, "Invalid Data");
+                                  }
                                 },
                                 text: "Predict"),
                           ),
@@ -815,7 +963,12 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                             child: FABcustom(
                                 onTap: () {
                                   if (_csvContent != '') {
-                                    _parseCsv(_csvContent);
+                                    try {
+                                      _parseCsv(_csvContent);
+                                    } catch (e) {
+                                      showCustomSnackBar(
+                                          context, "Invalid or Empty Data");
+                                    }
                                   } else {
                                     showCustomSnackBar(context,
                                         "Please wait while we gather insights");
