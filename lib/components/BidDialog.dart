@@ -105,15 +105,16 @@ void BidDialog(
                 child: Text('Place Bid'),
                 onPressed: () {
                   int combinedNumber = int.parse(numbers.join());
-                  if (combinedNumber > price) {
+                  if (combinedNumber >= price + 10000) {
                     updateCarPrice(products.id, products.price,
                         products.collectionValue, auth, combinedNumber);
-                    showCustomSnackBar(context, "Your bid is being processed");
+                    showCustomSnackBar(context,
+                        "Your bid is being processed. It may take a while!");
                     addToHistory(products.id, auth.uid);
                     Navigator.of(context).pop();
                   } else {
                     showCustomSnackBar(
-                        context, "The amount needs to be greater");
+                        context, "The bid needs to be greater than 10000");
                   }
                 },
               ),

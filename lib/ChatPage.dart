@@ -2,7 +2,6 @@ import 'package:biddy/List/Product.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -16,31 +15,57 @@ class ChatPageState extends State<ChatPage> {
   late String chatRoomId;
   final User? auth = FirebaseAuth.instance.currentUser;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String buyername = '';
+  String sellername = '';
   Product? product;
+  bool isLoading = true;
+  String winnerID = '';
+  String creatorID = '';
+  String othername = '';
+  bool _isLocked = false;
 
   @override
-  void didChangeDependencies() {
+  Future<void> didChangeDependencies() async {
     super.didChangeDependencies();
     Map<String, dynamic>? arguments =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    String winnerID = arguments['winningID'] as String;
-    String creatorID = arguments['creatorID'] as String;
+    winnerID = arguments['winningID'] as String;
+    creatorID = arguments['creatorID'] as String;
     chatRoomId = _generateChatRoomId(winnerID, creatorID);
     createAndStoreChatRoom(winnerID, creatorID);
-    /*
-    _requestNotificationPermissions();
-    _saveDeviceToken();
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      if (notification != null) {
-        print('Message also contained a notification: ${notification.title}');
-      }
-    });*/
+    buyername = await _getUserName(winnerID);
+    sellername = await _getUserName(creatorID);
+
+    getothername();
+    _simulateLoadingDelay();
+  }
+
+  Future<void> getothername() async {
+    if (winnerID == auth!.uid) {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(creatorID)
+          .get();
+      var data = doc.data() as Map<String, dynamic>;
+      othername = data['name'];
+    } else {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(winnerID)
+          .get();
+      var data = doc.data() as Map<String, dynamic>;
+      othername = data['name'];
+    }
+  }
+
+  Future<void> _simulateLoadingDelay() async {
+    await Future.delayed(Duration(seconds: 2));
+    setState(() {
+      isLoading = false;
+    });
   }
 
   Future<String> _getUserName(String userId) async {
-    //for testing using chat1@gmail.com
-    //for testing using chat2@gmail.com
     String userName = '';
     try {
       DocumentSnapshot userDoc =
@@ -65,7 +90,7 @@ class ChatPageState extends State<ChatPage> {
     DocumentReference userRef =
         FirebaseFirestore.instance.collection('users').doc(auth!.uid);
     // Get the user document
-    String buyer = await _getUserName(winnerID);
+    buyername = await _getUserName(winnerID);
     DocumentSnapshot userSnapshot = await userRef.get();
     if (userSnapshot.exists) {
       Map<String, dynamic>? userData = userSnapshot.data()
@@ -79,7 +104,7 @@ class ChatPageState extends State<ChatPage> {
         // Set the chat room data
         await newChatRef.update({
           'users': [winnerID, creatorID],
-          'buyer': buyer,
+          'buyer': buyername,
           'seller': await _getUserName(creatorID),
           'createdAt': Timestamp.now(),
         });
@@ -97,28 +122,6 @@ class ChatPageState extends State<ChatPage> {
 
   String _generateChatRoomId(String user1, String user2) {
     return user1.hashCode <= user2.hashCode ? '$user1-$user2' : '$user2-$user1';
-  }
-
-  void _requestNotificationPermissions() async {
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-  }
-
-  void _saveDeviceToken() async {
-    String? fcmToken = await FirebaseMessaging.instance.getToken();
-    if (fcmToken != null) {
-      final currentUser = FirebaseAuth.instance.currentUser!;
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .update({
-        'fcmToken': fcmToken,
-      });
-    }
   }
 
   Future<void> _sendMessage() async {
@@ -141,93 +144,186 @@ class ChatPageState extends State<ChatPage> {
         'lastMessage': lastMessage,
       });
       _controller.clear();
-      _sendNotificationToOtherUser(FirebaseAuth.instance.currentUser!.uid);
-    }
-  }
-
-  Future _sendNotificationToOtherUser(String winnerID) async {
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(FirebaseAuth.instance.currentUser!.uid) //change
-        .get();
-    String? fcmToken = userDoc['fcmToken'];
-    if (fcmToken != null) {
-      await FirebaseFirestore.instance.collection('notifications').add({
-        'token': fcmToken,
-        'title': 'New Message',
-        'body': 'You have a new message in the chat',
-      });
-      print("noti");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(chatRoomId),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          )
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('chatRooms')
-                  .doc(chatRoomId)
-                  .collection('messages')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                return ListView.builder(
-                  reverse: true,
-                  itemCount: snapshot.data!.docs.length,
-                  itemBuilder: (context, index) {
-                    DocumentSnapshot doc = snapshot.data!.docs[index];
-                    bool isMe =
-                        doc['userId'] == FirebaseAuth.instance.currentUser!.uid;
-                    return ListTile(
-                      title: Text(doc['text']),
-                      subtitle: Text(isMe ? 'Me' : 'Other'),
-                      tileColor: isMe ? Colors.blue[100] : Colors.grey[200],
-                    );
-                  },
-                );
-              },
+    return isLoading
+        ? Scaffold(
+            body: Center(
+              child: Container(
+                color: Colors.white,
+                child: CircularProgressIndicator(
+                  color: Color.fromARGB(255, 228, 129, 142),
+                ),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      labelText: 'Create Message',
-                      border: OutlineInputBorder(),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              foregroundColor: Colors.white,
+              automaticallyImplyLeading: false,
+              scrolledUnderElevation: 0.0,
+              backgroundColor: const Color.fromARGB(255, 255, 149, 163),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: _sendMessage,
+                  Container(
+                    width: MediaQuery.of(context).size.width / 1.5,
+                    child: Center(
+                      child: Text(
+                        '$othername \'s chat',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 24, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                PopupMenuButton<String>(
+                  onSelected: (String result) {
+                    switch (result) {
+                      case 'Option 1':
+                        // Handle Option 1
+                        break;
+                      case 'Option 2':
+                        setState(() {
+                          _isLocked = !_isLocked;
+                        });
+                        break;
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      value: 'Option 1',
+                      child: Text('Report Chat'),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'Option 2',
+                      child: Text(_isLocked
+                          ? 'Mark Item as Unsold'
+                          : 'Mark Item as Sold'),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
+            body: Column(
+              children: [
+                Expanded(
+                  child: StreamBuilder(
+                    stream: FirebaseFirestore.instance
+                        .collection('chatRooms')
+                        .doc(chatRoomId)
+                        .collection('messages')
+                        .orderBy('createdAt', descending: true)
+                        .snapshots(),
+                    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return ListView.builder(
+                        reverse: true,
+                        itemCount: snapshot.data!.docs.length,
+                        itemBuilder: (context, index) {
+                          DocumentSnapshot doc = snapshot.data!.docs[index];
+                          bool isMe = doc['userId'] ==
+                              FirebaseAuth.instance.currentUser!.uid;
+                          return Row(
+                            mainAxisAlignment: isMe
+                                ? MainAxisAlignment.end
+                                : MainAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 10.0, horizontal: 15.0),
+                                margin: EdgeInsets.symmetric(
+                                    vertical: 5.0, horizontal: 10.0),
+                                decoration: BoxDecoration(
+                                  color: isMe
+                                      ? Color.fromARGB(255, 255, 149, 164)
+                                      : Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: isMe
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      doc['text'],
+                                      style: TextStyle(
+                                          fontSize: 16.0, color: Colors.black),
+                                    ),
+                                    SizedBox(height: 5.0),
+                                    Text(
+                                      isMe ? 'You' : '$othername',
+                                      style: TextStyle(
+                                          fontSize: 12.0,
+                                          color: Colors.black54),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          enabled: !_isLocked,
+                          decoration: InputDecoration(
+                            labelText: _isLocked ? 'Chat Closed' : 'Enter text',
+                            labelStyle: TextStyle(
+                                color: Color.fromARGB(
+                                    255, 255, 149, 164)), // Change label color
+                            hintText: 'Type your message here...',
+                            hintStyle: TextStyle(
+                                color: Colors.grey), // Change hint text color
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Colors
+                                      .grey), // Change border color when enabled
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: Color.fromARGB(255, 255, 149,
+                                      164)), // Change border color when focused
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_upward),
+                        onPressed: _sendMessage,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
   }
 }

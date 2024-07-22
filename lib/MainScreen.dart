@@ -406,12 +406,8 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                   login();
                   _scaffoldKey.currentState?.openDrawer();
                 } else {
-                  //_showLoginDialog(context);
-                  Navigator.pushNamed(
-                    context,
-                    '/LoginPage',
-                    arguments: {},
-                  );
+                  _showLoginDialog(context);
+                  //Navigator.pushNamed(context,'/LoginPage',arguments: {},);
                 }
               },
               child: CircleAvatar(
@@ -905,12 +901,17 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                 Product data = products[index];
                                                 return GestureDetector(
                                                   onTap: () {
-                                                    Navigator.pushNamed(
-                                                        context, '/itemScreen',
-                                                        arguments: {
-                                                          'product': data,
-                                                          'id': data.id
-                                                        });
+                                                    if (user != null) {
+                                                      Navigator.pushNamed(
+                                                          context,
+                                                          '/itemScreen',
+                                                          arguments: {
+                                                            'product': data,
+                                                            'id': data.id
+                                                          });
+                                                    } else {
+                                                      _showLoginDialog(context);
+                                                    }
                                                   },
                                                   child: Card.filled(
                                                     color: Colors.transparent,
@@ -941,7 +942,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                                       width:
                                                                           300,
                                                                       height:
-                                                                          270,
+                                                                          300,
                                                                       fit: BoxFit
                                                                           .fill,
                                                                       frameBuilder: (BuildContext context,
@@ -991,7 +992,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                                   .symmetric(
                                                                   horizontal:
                                                                       4.0,
-                                                                  vertical: 4),
+                                                                  vertical: 0),
                                                           child: Text(
                                                             data.model,
                                                             style: TextStyle(

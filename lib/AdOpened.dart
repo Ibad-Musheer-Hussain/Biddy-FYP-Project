@@ -1,6 +1,7 @@
 // ignore_for_file: await_only_futures, file_names, library_private_types_in_public_api, deprecated_member_use, sized_box_for_whitespace, avoid_print, non_constant_identifier_names, avoid_unnecessary_containers, unused_local_variable, prefer_const_constructors, prefer_const_literals_to_create_immutables
 
 import 'dart:async';
+import 'dart:io';
 import 'package:biddy/List/Product.dart';
 import 'package:biddy/NeedLoginDialog.dart';
 import 'package:biddy/components/BidDialog.dart';
@@ -10,13 +11,18 @@ import 'package:biddy/functions/formatRemainingTime.dart';
 import 'package:biddy/functions/mergeStreams.dart';
 import 'package:biddy/functions/showCustomSnackBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:csv/csv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_ml_model_downloader/firebase_ml_model_downloader.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:biddy/functions/openimagenetwork.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:http/http.dart' as http;
 
 class ItemsScreen extends StatefulWidget {
   const ItemsScreen({super.key});
@@ -29,6 +35,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
   int flag = 0; //for snackbar displaying that price has been updated
   int price = 0;
   bool isFavorite = false;
+  List<String> insights = [];
+  List<String> positiveInsights = [];
+  List<String> negativeInsights = [];
+  List<String> neutralInsights = [];
   late String chatRoomId;
   late StreamSubscription<DatabaseEvent> _priceSubscription;
   late DatabaseReference _priceRef;
@@ -41,6 +51,38 @@ class _ItemsScreenState extends State<ItemsScreen> {
   final User? auth = FirebaseAuth.instance.currentUser;
   int currenttime = 0;
   bool isLoading = true;
+  String username = '';
+  String currentuser = '';
+  int _countHondaPristineSoldGreaterThanPoint1 = 0;
+  int _countHondaPristineSoldEqualToZero = 0;
+  int pricehigher = 0;
+  int pricelower = 0;
+  String _csvContent = '';
+  double probabilitySold = 0.0;
+
+  Future<void> _downloadCsv() async {
+    try {
+      // Get a reference to the CSV file
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('cars_with_sold_probabilities2.csv');
+
+      // Get the download URL
+      final url = await ref.getDownloadURL();
+
+      // Download the file
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        setState(() {
+          _csvContent = response.body;
+        });
+      } else {
+        throw Exception('Failed to load CSV file');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -50,6 +92,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
     address = arguments['id'] as String;
     Product products = arguments['product'] as Product;
     isProductInFavorites(products.id, auth?.uid);
+    _downloadCsv();
     login();
     _priceRef = FirebaseDatabase.instance
         .reference()
@@ -71,6 +114,217 @@ class _ItemsScreenState extends State<ItemsScreen> {
         });
       }
     });
+  }
+
+  void _showAlertDialog(BuildContext context, String title, String content) {
+    final Color positiveColor = Colors.green[100]!;
+    final Color negativeColor = Colors.red[100]!;
+    final Color neutralColor = Colors.grey[100]!;
+
+    final Icon positiveIcon =
+        Icon(Icons.thumb_up, color: Colors.green, size: 20);
+    final Icon negativeIcon =
+        Icon(Icons.thumb_down, color: Colors.red, size: 20);
+    final Icon neutralIcon = Icon(Icons.info, color: Colors.grey, size: 20);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                Icons.info,
+                color: Colors.blue,
+                size: 40,
+              ),
+              SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(content, style: TextStyle(fontSize: 16)),
+              SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Insights',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...positiveInsights.map((insight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: positiveColor,
+                                child: positiveIcon,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(insight,
+                                      style: TextStyle(
+                                          fontSize: 14.0, color: Colors.black)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                      );
+                    }).toList(),
+                    ...negativeInsights.map((insight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: negativeColor,
+                                child: negativeIcon,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(insight,
+                                      style: TextStyle(
+                                          fontSize: 14.0, color: Colors.black)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                      );
+                    }).toList(),
+                    ...neutralInsights.map((insight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: neutralColor,
+                                child: neutralIcon,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(insight,
+                                      style: TextStyle(
+                                          fontSize: 14.0, color: Colors.black)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8), // Gap after each neutral insight
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void createinsights(Product products) {
+    positiveInsights.clear();
+    negativeInsights.clear();
+    neutralInsights.clear();
+
+    var yearValue = products.year;
+    var kmsDrivenValue = products.kms;
+    var startingPriceValue = products.price;
+    if (startingPriceValue < 400000) {
+      negativeInsights
+          .add("This price is quite low. The buyer could be hiding something.");
+      probabilitySold = probabilitySold * 0.85;
+    } else if (startingPriceValue >= 8000000) {
+      negativeInsights
+          .add("The price is quite high. Other listing could be better.");
+      probabilitySold = probabilitySold * 0.65;
+    }
+
+    if (products.description.length < 50) {
+      negativeInsights
+          .add("Short descriptions might indicate the seller is negligent.");
+      probabilitySold = probabilitySold * 0.85;
+    }
+
+    if (products.kms > 150000) {
+      negativeInsights.add("More driven vehicles may have mechanical faults.");
+    }
+
+    if (products.title.isEmpty) {
+      negativeInsights.add(
+          "An absence of a title image might suggest the seller could be concealing details.");
+      probabilitySold = probabilitySold * 0.8;
+    }
+
+    if (products.year < 2010) {
+      negativeInsights.add("Older vehicles may have mechanical faults.");
+    }
+
+    if (products.uploadedImageUrls.length <= 2) {
+      negativeInsights
+          .add("No pictures may suggest that the seller is concealing damage.");
+      probabilitySold = probabilitySold * 0.8;
+    }
+
+    if (products.uploadedImageUrls.length > 2 &&
+        products.uploadedImageUrls.length < 5) {
+      neutralInsights.add(
+          "Fewer pictures may suggest that the seller is concealing something.");
+      probabilitySold = probabilitySold * 0.8;
+    }
+
+    if (probabilitySold >= 0.65) {
+      positiveInsights.add("This ad listing is recommended by Biddy.");
+    } else if (probabilitySold >= 0.40 && probabilitySold < 0.65) {
+      positiveInsights.add(
+          "This ad listing is fair but other options might not be available.");
+    } else if (probabilitySold <= 0.20) {
+      negativeInsights.add("This ad listing is not recommended by Biddy.");
+    }
+    print("probability");
+    print(probabilitySold);
+    insights.addAll(positiveInsights);
+    insights.addAll(negativeInsights);
+    insights.addAll(neutralInsights);
   }
 
   void login() async {
@@ -167,8 +421,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
     }
   }
 
-
-
   Future<void> isProductInFavorites(String productId, String? userId) async {
     try {
       // Get the reference to the user document
@@ -211,7 +463,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   Future<void> _simulateLoadingDelay() async {
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(Duration(seconds: 4));
     setState(() {
       isLoading = false; // Toggle isLoading to false after delay
     });
@@ -222,6 +474,10 @@ class _ItemsScreenState extends State<ItemsScreen> {
     super.initState();
     _simulateLoadingDelay();
     updatebalance(auth!, context);
+    if (auth != null) {
+      _getName2(FirebaseAuth.instance.currentUser!.uid);
+    }
+
     currenttime = storeTimestamp();
     _startCountdown();
   }
@@ -262,8 +518,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   Future<String> _getUserName(String userId) async {
-    //for testing using chat1@gmail.com
-    //for testing using chat2@gmail.com
     String userName = '';
     try {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
@@ -272,8 +526,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
           .get();
       if (userDoc.exists) {
         setState(() {
-          userName = userDoc['name']; // Assuming the field name is 'name'
-          print(userName);
+          userName = userDoc['name'];
         });
         return userName;
       } else {
@@ -283,6 +536,47 @@ class _ItemsScreenState extends State<ItemsScreen> {
     } catch (e) {
       print('Error getting user: $e');
       return userName;
+    }
+  }
+
+  Future<String> _getUserName2(String userId) async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        setState(() {
+          username = userDoc['name'];
+        });
+
+        return userDoc['name']; // Assuming the field name is 'name'
+      } else {
+        print('User does not exist');
+        return '';
+      }
+    } catch (e) {
+      print('Error getting user: $e');
+      return '';
+    }
+  }
+
+  Future<String> _getName2(String userId) async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (userDoc.exists) {
+        currentuser = userDoc['name'];
+        return userDoc['name']; // Assuming the field name is 'name'
+      } else {
+        print('User does not exist');
+        return '';
+      }
+    } catch (e) {
+      print('Error getting user: $e');
+      return '';
     }
   }
 
@@ -351,6 +645,191 @@ class _ItemsScreenState extends State<ItemsScreen> {
       isbalance = true;
     } else {
       isbalance = false;
+    }
+  }
+
+  Future<void> downloadModelAndPredict(Product product) async {
+    FirebaseModelDownloader modelDownloader = FirebaseModelDownloader.instance;
+    FirebaseCustomModel customModel = await modelDownloader.getModel(
+      'BiddyModel',
+      FirebaseModelDownloadType.localModelUpdateInBackground,
+    );
+    final modelPath = customModel.file;
+    if (modelPath != null) {
+      final result = await predictWithModel(modelPath.path, product);
+      setState(() {
+        probabilitySold = result;
+        createinsights(product);
+        //showCustomSnackBar(context, "Final result $probabilitySold");
+        print(probabilitySold);
+      });
+    }
+  }
+
+  Future<double> predictWithModel(String modelPath, Product product) async {
+    final interpreter = await Interpreter.fromFile(File(modelPath));
+    final input = createInput(product);
+    final output = List.filled(1, 0).reshape([1, 1]);
+    interpreter.run(input, output);
+
+    return output[0][0].toDouble();
+  }
+
+  List<double> createInput(Product product) {
+    String Brand = product.brand.toLowerCase();
+    String Model = product.model.toLowerCase();
+    bool Brand_Honda;
+    bool Brand_Suzuki;
+    bool Brand_Toyota;
+    bool Model_City;
+    bool Model_Civic;
+    bool Model_Corolla;
+    bool Model_Mehran;
+
+    switch (Brand) {
+      case "honda":
+        Brand_Honda = true;
+        Brand_Suzuki = false;
+        Brand_Toyota = false;
+        break;
+      case "suzuki":
+        Brand_Honda = false;
+        Brand_Suzuki = true;
+        Brand_Toyota = false;
+        break;
+      case "toyota":
+        Brand_Honda = false;
+        Brand_Suzuki = false;
+        Brand_Toyota = true;
+        break;
+      default:
+        Brand_Honda = false;
+        Brand_Suzuki = false;
+        Brand_Toyota = false;
+        print("default activated");
+    }
+
+    switch (Model) {
+      case "city":
+        Model_City = true;
+        Model_Mehran = false;
+        Model_Corolla = false;
+        Model_Civic = false;
+        break;
+      case "civic":
+        Model_City = false;
+        Model_Mehran = false;
+        Model_Corolla = false;
+        Model_Civic = true;
+        break;
+      case "corolla":
+        Model_City = false;
+        Model_Mehran = false;
+        Model_Corolla = true;
+        Model_Civic = false;
+        break;
+      case "mehran":
+        Model_City = false;
+        Model_Mehran = true;
+        Model_Corolla = false;
+        Model_Civic = false;
+        break;
+      default:
+        Model_City = false;
+        Model_Mehran = false;
+        Model_Corolla = false;
+        Model_Civic = false;
+        print("default activated");
+    }
+
+    late Map<String, Object> data;
+    try {
+      data = {
+        'KMs Driven': product.kms,
+        'Price': product.price,
+        'Year': product.year,
+        'Brand_Honda': Brand_Honda,
+        'Brand_Suzuki': Brand_Suzuki,
+        'Brand_Toyota': Brand_Toyota,
+        'Condition_Fair': false,
+        'Condition_Good': false,
+        'Condition_Poor': true,
+        'Condition_Pristine': false,
+        'Fuel_CNG': false,
+        'Fuel_Petrol': true,
+        'Model_City': Model_City,
+        'Model_Civic': Model_Civic,
+        'Model_Corolla': Model_Corolla,
+        'Model_Mehran': Model_Mehran,
+        'Registered City_Islamabad': false,
+        'Registered City_Karachi': false,
+        'Registered City_Lahore': true,
+      };
+      print(data);
+    } catch (e) {
+      showCustomSnackBar(context, "Invalid or Empty Data");
+      return [0.0];
+    }
+
+    return data.values.map((value) {
+      if (value is bool) {
+        return value ? 1.0 : 0.0;
+      } else if (value is num) {
+        return value.toDouble();
+      } else {
+        throw ArgumentError('Unsupported data type: ${value.runtimeType}');
+      }
+    }).toList();
+  }
+
+  Future<void> PredictandParse(String csvContent, Product products) async {
+    downloadModelAndPredict(products);
+    _parseCsv(csvContent, products);
+  }
+
+  void _parseCsv(String csvContent, Product product) {
+    final csvData = const CsvToListConverter().convert(csvContent, eol: '\n');
+
+    int countSoldGreaterThanPoint1 = 0;
+    int countSoldEqualToZero = 0;
+
+    csvData.skip(1).forEach((row) {
+      final _brand = row[0].toString().trim().toLowerCase();
+      final _condition = row[1].toString().trim().toLowerCase();
+      final _model = row[4].toString().trim().toLowerCase();
+      final price = double.parse(row[5].toString().trim().toLowerCase());
+      pricelower = product.price - 250000;
+      pricehigher = product.price + 250000;
+      final soldProbability =
+          double.parse(row[8].toString().trim().toLowerCase());
+
+      if (_brand == product.brand.toLowerCase() &&
+          price > pricelower &&
+          price < pricehigher &&
+          _condition == "pristine" &&
+          _model == product.model.toString().toLowerCase()) {
+        if (soldProbability > 0.1) {
+          countSoldGreaterThanPoint1++;
+        } else if (soldProbability == 0) {
+          countSoldEqualToZero++;
+        }
+      }
+    });
+
+    setState(() {
+      _countHondaPristineSoldGreaterThanPoint1 = countSoldGreaterThanPoint1;
+      _countHondaPristineSoldEqualToZero = countSoldEqualToZero;
+    });
+
+    if (countSoldGreaterThanPoint1 == 0 && countSoldEqualToZero == 0) {
+      _showAlertDialog(context, "Biddy Insights",
+          "This model is not present at this price range in our data set");
+    } else {
+      _showAlertDialog(
+        context,
+        "Data Insights",
+        "${product.brand} ${product.model} condition from price range $pricelower - $pricehigher\nSold: $_countHondaPristineSoldGreaterThanPoint1\nUnsold: $_countHondaPristineSoldEqualToZero",
+      );
     }
   }
 
@@ -433,7 +912,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         children: [
                           Container(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                                  const EdgeInsets.symmetric(horizontal: 4.0),
                               height: 200,
                               width: MediaQuery.of(context).size.width,
                               child: products.uploadedImageUrls.isEmpty
@@ -469,7 +948,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                             onLongPress: () {},
                                             child: Padding(
                                               padding:
-                                                  const EdgeInsets.all(8.0),
+                                                  const EdgeInsets.all(4.0),
                                               child: Container(
                                                 width: 250,
                                                 height: 200,
@@ -528,7 +1007,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                             },
                                             child: Padding(
                                               padding:
-                                                  const EdgeInsets.all(8.0),
+                                                  const EdgeInsets.all(4.0),
                                               child: Image.network(
                                                 products.uploadedImageUrls[index -
                                                     1], // Adjust index for the list
@@ -544,10 +1023,38 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         ],
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Text(
-                          '$price',
+                          'Rs. $price',
                           style: TextStyle(fontSize: 24),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4.0),
+                              child: Icon(Icons.emoji_events_outlined),
+                            ),
+                            FutureBuilder<String>(
+                              future: _getUserName2(products.winningid),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasError) {
+                                  return Text('Error: ${snapshot.error}');
+                                } else if (snapshot.hasData) {
+                                  return Text(
+                                    '  ${username}',
+                                    style: TextStyle(fontSize: 24),
+                                  );
+                                } else {
+                                  return CircularProgressIndicator(
+                                    color: Color.fromARGB(255, 255, 149, 163),
+                                  );
+                                }
+                              },
+                            )
+                          ],
                         ),
                       ),
                       Padding(
@@ -866,7 +1373,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                   style: const TextStyle(fontSize: 24),
                                 ),
                       Container(
-                        width: 150,
+                        width: 200,
                         child: !timerIsNegative
                             ? (products.creatorID != auth?.uid)
                                 ? FABcustom(
@@ -878,7 +1385,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                         if (isbalance) {
                                           BidDialog(
                                               context, products, price, auth!);
-                                          
+                                          PredictandParse(
+                                              _csvContent, products);
                                         } else {
                                           showCustomSnackBar(context,
                                               "Please recharge your account to Bid");
@@ -887,7 +1395,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                         _showLoginDialog(context);
                                       }
                                     },
-                                    text: "Bid",
+                                    text: "Get Insights & Bid",
                                   )
                                 : FABcustom(
                                     onTap: () {

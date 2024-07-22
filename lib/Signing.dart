@@ -244,192 +244,70 @@ class _Continue extends State<LoginPage> {
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Center(
-                      child: Container(
-                        height: 230,
-                        child: Stack(
-                          children: [
-                            AnimatedPositioned(
-                              duration: Duration(milliseconds: 800),
-                              curve: Curves.easeInOut,
-                              left: _showFirstContainer
-                                  ? 2
-                                  : -MediaQuery.of(context).size.width,
-                              child: Container(
-                                width: MediaQuery.of(context).size.width / 1.28,
-                                height: 217.5,
-                                decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 1,
-                                      offset: Offset(0, 1),
-                                    ),
-                                  ],
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: Color.fromARGB(255, 255, 218, 223),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    SizedBox(
-                                      height: 12,
-                                    ),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "   Login or Signup",
-                                          textAlign: TextAlign.left,
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Text(
-                                      "    Get Started for free",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.black38,
-                                      ),
-                                    ),
-                                    LoginTextField(
-                                      textEditingController: email,
-                                      hintText: 'Email',
-                                      obscureText: false,
-                                    ),
-                                    Transform.translate(
-                                      offset: Offset(0, 8),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceAround,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                                right: 70.0),
-                                            child: TextButton(
-                                                onPressed: () {
-                                                  _showForgotPasswordDialog(
-                                                      context);
-                                                },
-                                                child: Text(
-                                                  "Forgot Password",
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    decoration: TextDecoration
-                                                        .underline,
-                                                    color: Colors.black38,
-                                                  ),
-                                                )),
-                                          ),
-                                          TextButton(
-                                              onPressed: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          const MainPage()),
-                                                );
-                                              },
-                                              child: Text(
-                                                "Guest Login",
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                  color: Colors.black38,
-                                                ),
-                                              ))
-                                        ],
-                                      ),
-                                    )
-                                  ],
-                                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Center(
+                    child: Container(
+                      height: 230,
+                      child: Stack(
+                        children: [
+                          AnimatedPositioned(
+                            duration: Duration(milliseconds: 800),
+                            curve: Curves.easeInOut,
+                            left: _showFirstContainer
+                                ? 2
+                                : -MediaQuery.of(context).size.width,
+                            child: Container(
+                              width: MediaQuery.of(context).size.width / 1.28,
+                              height: 217.5,
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    spreadRadius: 1,
+                                    blurRadius: 1,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                                borderRadius: BorderRadius.circular(12),
+                                color: Color.fromARGB(255, 255, 218, 223),
                               ),
-                            ),
-                            AnimatedPositioned(
-                              duration: Duration(milliseconds: 800),
-                              curve: Curves.easeInOut,
-                              right: _showFirstContainer
-                                  ? -MediaQuery.of(context).size.width
-                                  : 7,
-                              child: Container(
-                                width: MediaQuery.of(context).size.width / 1.29,
-                                height: 217.5,
-                                decoration: BoxDecoration(
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      spreadRadius: 1,
-                                      blurRadius: 1,
-                                      offset: Offset(0, 1),
-                                    ),
-                                  ],
-                                  borderRadius: BorderRadius.circular(12),
-                                  color: Color.fromARGB(255, 255, 218, 223),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    SizedBox(
-                                      height: 2,
-                                    ),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          _showLogin ? "  Login" : "  Signup",
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        IconButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              _showFirstContainer =
-                                                  !_showFirstContainer;
-                                            });
-                                          },
-                                          icon: Icon(Icons.close),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  SizedBox(
+                                    height: 12,
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "   Login or Signup",
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
                                           color: Colors.black,
                                         ),
-                                      ],
-                                    ),
-                                    SizedBox(
-                                      height: 3,
-                                    ),
-                                    Transform.translate(
-                                      offset: Offset(0, -12),
-                                      child: Text(
-                                        "   Get Started for free",
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.black38,
-                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  Text(
+                                    "    Get Started for free",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.black38,
                                     ),
-                                    Transform.translate(
-                                      offset: Offset(0, -4),
-                                      child: LoginTextField(
-                                        textEditingController: pass,
-                                        hintText: "Password",
-                                        obscureText: true,
-                                      ),
-                                    ),
-                                    Row(
+                                  ),
+                                  LoginTextField(
+                                    textEditingController: email,
+                                    hintText: 'Email',
+                                    obscureText: false,
+                                  ),
+                                  Transform.translate(
+                                    offset: Offset(0, 8),
+                                    child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceAround,
                                       children: [
@@ -437,7 +315,10 @@ class _Continue extends State<LoginPage> {
                                           padding: const EdgeInsets.only(
                                               right: 70.0),
                                           child: TextButton(
-                                              onPressed: () {},
+                                              onPressed: () {
+                                                _showForgotPasswordDialog(
+                                                    context);
+                                              },
                                               child: Text(
                                                 "Forgot Password",
                                                 style: TextStyle(
@@ -449,7 +330,14 @@ class _Continue extends State<LoginPage> {
                                               )),
                                         ),
                                         TextButton(
-                                            onPressed: () {},
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const MainPage()),
+                                              );
+                                            },
                                             child: Text(
                                               "Guest Login",
                                               style: TextStyle(
@@ -460,38 +348,150 @@ class _Continue extends State<LoginPage> {
                                               ),
                                             ))
                                       ],
-                                    )
-                                  ],
-                                ),
+                                    ),
+                                  )
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          AnimatedPositioned(
+                            duration: Duration(milliseconds: 800),
+                            curve: Curves.easeInOut,
+                            right: _showFirstContainer
+                                ? -MediaQuery.of(context).size.width
+                                : 7,
+                            child: Container(
+                              width: MediaQuery.of(context).size.width / 1.29,
+                              height: 217.5,
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    spreadRadius: 1,
+                                    blurRadius: 1,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                                borderRadius: BorderRadius.circular(12),
+                                color: Color.fromARGB(255, 255, 218, 223),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  SizedBox(
+                                    height: 2,
+                                  ),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _showLogin ? "  Login" : "  Signup",
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _showFirstContainer =
+                                                !_showFirstContainer;
+                                          });
+                                        },
+                                        icon: Icon(Icons.close),
+                                        color: Colors.black,
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: 3,
+                                  ),
+                                  Transform.translate(
+                                    offset: Offset(0, -12),
+                                    child: Text(
+                                      "   Get Started for free",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.black38,
+                                      ),
+                                    ),
+                                  ),
+                                  Transform.translate(
+                                    offset: Offset(0, -4),
+                                    child: LoginTextField(
+                                      textEditingController: pass,
+                                      hintText: "Password",
+                                      obscureText: true,
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 70.0),
+                                        child: TextButton(
+                                            onPressed: () {},
+                                            child: Text(
+                                              "Forgot Password",
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                color: Colors.black38,
+                                              ),
+                                            )),
+                                      ),
+                                      TextButton(
+                                          onPressed: () {},
+                                          child: Text(
+                                            "Guest Login",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                              color: Colors.black38,
+                                            ),
+                                          ))
+                                    ],
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    FABcustom(
-                        onTap: () {
-                          if (_showLogin) {
-                            print(_showLogin);
-                            login();
-                            pass.clear();
-                          }
-                          if (_showFirstContainer) {
-                            _checkEmailRegistration(context);
-                          }
+                  ),
+                  FABcustom(
+                      onTap: () {
+                        if (_showLogin) {
                           print(_showLogin);
-                          if (_showLogin == false &&
-                              _showFirstContainer == false) {
-                            print("register triggered");
-                            register();
-                          }
-                          _showFirstContainer = !_showFirstContainer;
-                        },
-                        text: _showLogin ? "Continue with email" : "Sign Up"),
-                    SizedBox(
-                      height: 15,
-                    ),
-                    Row(
+                          login();
+                          pass.clear();
+                        }
+                        if (_showFirstContainer) {
+                          _checkEmailRegistration(context);
+                        }
+                        print(_showLogin);
+                        if (_showLogin == false &&
+                            _showFirstContainer == false) {
+                          print("register triggered");
+                          register();
+                        }
+                        _showFirstContainer = !_showFirstContainer;
+                      },
+                      text: _showLogin ? "Continue with email" : "Sign Up"),
+                  SizedBox(
+                    height: 15,
+                  ),
+                  Center(
+                    child: Row(
                       children: <Widget>[
                         Expanded(
                           child: Divider(
@@ -514,42 +514,42 @@ class _Continue extends State<LoginPage> {
                         ),
                       ],
                     ),
-                    SizedBox(
-                      height: 15,
+                  ),
+                  SizedBox(
+                    height: 15,
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      signInWithGoogle(context);
+                    },
+                    icon: Image.asset(
+                      'lib/images/google.png',
+                      height: 24.0,
                     ),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        signInWithGoogle(context);
-                      },
-                      icon: Image.asset(
-                        'lib/images/google.png',
-                        height: 24.0,
-                      ),
-                      label: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 45.0, right: 50, top: 18, bottom: 18),
-                        child: Text(
-                          'Continue with Google              ',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.black,
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        elevation: 2.0,
+                    label: Padding(
+                      padding: const EdgeInsets.only(
+                          left: 45.0, right: 50, top: 18, bottom: 18),
+                      child: Text(
+                        'Continue with Google',
+                        style: TextStyle(fontSize: 14),
                       ),
                     ),
-                    SizedBox(
-                      height: 15,
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.black,
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      elevation: 2.0,
                     ),
-                    SizedBox(
-                      height: 15,
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    height: 15,
+                  ),
+                  SizedBox(
+                    height: 15,
+                  ),
+                ],
               ),
             ),
           ),

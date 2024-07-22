@@ -19,10 +19,10 @@ class _YouradsState extends State<Yourads> {
 
   void initState() {
     super.initState();
-    fetchFavourites();
+    fetchUserads();
   }
 
-  Future<void> fetchFavourites() async {
+  Future<void> fetchUserads() async {
     try {
       await Future.delayed(Duration(milliseconds: 800));
       print(user?.uid);
@@ -41,7 +41,7 @@ class _YouradsState extends State<Yourads> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error fetching favourites: $e");
+      print("Error fetching Userads: $e");
     }
   }
 
@@ -93,7 +93,7 @@ class _YouradsState extends State<Yourads> {
           : Padding(
               padding: const EdgeInsets.all(20.0),
               child: RefreshIndicator(
-                onRefresh: () => fetchFavourites(),
+                onRefresh: () => fetchUserads(),
                 child: StreamBuilder<List<QuerySnapshot>>(
                   stream: mergeStreams(),
                   builder: (context, snapshot) {
@@ -114,7 +114,7 @@ class _YouradsState extends State<Yourads> {
 
                     if (filteredDocs.isEmpty) {
                       return Center(
-                        child: Text('You have no favorites'),
+                        child: Text('You have not posted any ads'),
                       );
                     }
                     return ListView.builder(

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 //import 'package:biddy/ContinueAd.dart';
 import 'package:biddy/ContinueAdBetter.dart';
+import 'package:biddy/ContinueAdCombine.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -467,7 +468,7 @@ class _CreateAdState extends State<CreateAd> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ContinueAdBetter(
+                          builder: (context) => Continueadcombine(
                               uploadImagesFuture: uploadImagesFuture),
                         ),
                       );

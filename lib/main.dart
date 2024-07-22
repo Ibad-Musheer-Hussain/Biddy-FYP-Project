@@ -1,26 +1,30 @@
-import 'package:biddy/ContinueAdBetter.dart';
+import 'package:biddy/ContinueAdCombine.dart';
 import 'package:biddy/Easypaisa.dart';
 import 'package:biddy/ContinueAccount.dart';
 import 'package:biddy/Jazzcash.dart';
 import 'package:biddy/Payment.dart';
 import 'package:biddy/Profile.dart';
+import 'package:biddy/Settings.dart';
 import 'package:biddy/YourAds.dart';
-import 'package:biddy/card.dart';
+import 'package:biddy/creditcard.dart';
 import 'package:biddy/chatPage.dart';
 import 'package:biddy/Signing.dart';
 import 'package:biddy/PickImagesForAd.dart';
 import 'package:biddy/MainScreen.dart';
 import 'package:biddy/AdOpened.dart';
-import 'package:biddy/circleavatar.dart';
-import 'package:biddy/components/Help.dart';
-import 'package:biddy/test.dart';
+import 'package:biddy/Help.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  await Future.delayed(Duration(seconds: 3));
   await Firebase.initializeApp();
+  FlutterNativeSplash.remove();
   FirebaseMessaging.instance.getToken();
   runApp(const MyApp());
 }
@@ -40,22 +44,21 @@ class MyApp extends StatelessWidget {
       routes: {
         '/MainPage': (context) => const MainPage(),
         '/CreateAd': (context) => const CreateAd(),
-        '/Test': (context) => const Test(),
         '/LoginPage': (context) => const LoginPage(),
-        '/ContinueAd': (context) => ContinueAdBetter(
-            uploadImagesFuture:
-                Future.value(AdData(titleURL: '', pictureUrls: []))),
         '/itemScreen': (context) => const ItemsScreen(),
         '/chatPage': (context) => ChatPage(),
         '/payment': (context) => Payment(),
         '/easypaisa': (context) => Easypaisa(),
         '/jazzcash': (context) => Jazzcash(),
-        '/circleavatar': (context) => CircleAvatarFromGallery(),
         '/creditcard': (context) => CreditCardForm(),
         '/finalizeaccount': (context) => Continueaccount(),
         '/profile': (context) => Profile(),
         '/YourAds': (context) => Yourads(),
-        '/help': (context) => Help()
+        '/help': (context) => Help(),
+        '/settings': (context) => Setting(),
+        '/CombineAd': (context) => Continueadcombine(
+            uploadImagesFuture:
+                Future.value(AdData(titleURL: '', pictureUrls: []))),
       },
       home: MainPage(),
     );

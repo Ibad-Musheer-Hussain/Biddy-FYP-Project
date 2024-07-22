@@ -80,6 +80,7 @@ class Help extends StatelessWidget {
         '2. Tap on the “Bid” button.',
         '3. Select your bid amount in the bid box. It must be higher than the current bid.',
         '4. Click "Place Bid" to submit your bid.',
+        '5. Remember that Bids could not be reversed.',
         'Viewing Bid History',
         '1. Access the main page.',
         '2. In the bottom navigation bar of the screen, tap on the history icon.',

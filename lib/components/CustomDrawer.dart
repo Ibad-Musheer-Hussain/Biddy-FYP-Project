@@ -105,7 +105,9 @@ class _CustomDrawerState extends State<CustomDrawer> {
               'Settings',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            onTap: () {},
+            onTap: () {
+              Navigator.pushNamed(context, '/settings');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.help),
@@ -126,7 +128,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
             onTap: () {},
           ),
           Expanded(
-            child: Container(), 
+            child: Container(),
           ),
           ListTile(
             leading: const Icon(
