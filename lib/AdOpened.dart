@@ -641,7 +641,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
     var data = doc.data() as Map<String, dynamic>;
     int balance = data['balance'];
     print(balance);
-    if (balance > 100) {
+    if (balance > 10000) {
       isbalance = true;
     } else {
       isbalance = false;

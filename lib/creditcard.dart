@@ -61,7 +61,7 @@ class CreditCardForm extends StatelessWidget {
               width: MediaQuery.of(context).size.width / 1.5,
               child: Center(
                 child: Text(
-                  'Easypaisa',
+                  'Credit / Debit Card',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 24, color: Colors.white),
                 ),

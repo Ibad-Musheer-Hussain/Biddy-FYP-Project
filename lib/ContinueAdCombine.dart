@@ -33,14 +33,14 @@ class _ContinueadcombineState extends State<Continueadcombine> {
   int _countHondaPristineSoldEqualToZero = 0;
   int pricehigher = 0;
   int pricelower = 0;
-  int selectedDays = 3;
+  int selectedDays = 0;
   List<String> insights = [];
   List<String> positiveInsights = [];
   List<String> negativeInsights = [];
   List<String> neutralInsights = [];
   String titleURL = '';
   List<String> pictureUrls = [];
-  String dropdownValue = '3 Days';
+  String dropdownValue = '2 Min';
   String CollectionValue = 'Sedan';
   String ConditionValue2 = 'Pristine';
   String TransmissionValue = 'Automatic';
@@ -55,6 +55,7 @@ class _ContinueadcombineState extends State<Continueadcombine> {
       FirebaseFirestore.instance.collection('Ads');
   double probabilitySold = 0.0;
   String _csvContent = '';
+  int timestamp2 = 0;
 
   Future<void> _downloadCsv() async {
     try {
@@ -537,12 +538,41 @@ class _ContinueadcombineState extends State<Continueadcombine> {
     return timestampMillis;
   }
 
+  void updatebalance(User user, BuildContext context) async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    var data = doc.data() as Map<String, dynamic>;
+    int balance = data['balance'];
+    print(balance);
+
+    if (balance > 10000) {
+      balance = balance - 10000;
+    } else {
+      showCustomSnackBar(context, "Insufficient Balance");
+      Navigator.pushNamed(context, '/MainPage');
+    }
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user?.uid)
+        .update({'balance': balance});
+  }
+
   Future<void> uploadCarAd() async {
     try {
       String documentId =
           adsCollection.doc().id; // Generate a custom document ID
       int timestampMillis = storeTimestamp(); // Get timestamp in milliseconds
-      int timestamp2 = timestampMillis + (selectedDays * 24 * 60 * 60 * 1000);
+      print("$selectedDays selected Days\n");
+      if (selectedDays == 0) {
+        timestamp2 = (timestampMillis + 120000);
+        print("$selectedDays selected Days\n");
+        print("$selectedDays selected Days\n");
+        print("$selectedDays selected Days\n");
+      } else {
+        timestamp2 = timestampMillis + (selectedDays * 24 * 60 * 60 * 1000);
+      }
 
       Map<String, dynamic> data = {
         // Create a map containing the data to be added to Firestore and the Realtime Database
@@ -605,6 +635,7 @@ class _ContinueadcombineState extends State<Continueadcombine> {
     } catch (error) {
       print('Failed to add car ad: $error');
     }
+    updatebalance(auth!, context);
   }
 
   @override
@@ -1117,6 +1148,11 @@ class _ContinueadcombineState extends State<Continueadcombine> {
                                 child: FormBuilderDropdown<String>(
                                   onChanged: (value) {
                                     switch (value) {
+                                      case "2 Min":
+                                        print(selectedDays);
+                                        selectedDays = 0;
+                                        break;
+
                                       case "3 Days":
                                         selectedDays = 3;
                                         break;
@@ -1150,9 +1186,14 @@ class _ContinueadcombineState extends State<Continueadcombine> {
                                       )),
                                   dropdownColor:
                                       Color.fromARGB(255, 255, 218, 223),
-                                  initialValue: "3 Days",
+                                  initialValue: "2 Min",
                                   borderRadius: BorderRadius.circular(12),
-                                  items: ['3 Days', '7 Days', '14 Days']
+                                  items: [
+                                    '2 Min',
+                                    '3 Days',
+                                    '7 Days',
+                                    '14 Days'
+                                  ]
                                       .map((dropdownValue) => DropdownMenuItem(
                                             value: dropdownValue,
                                             child: Text(dropdownValue),

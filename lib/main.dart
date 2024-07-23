@@ -64,4 +64,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-// when signed out clicking on avatar directly leads to login page

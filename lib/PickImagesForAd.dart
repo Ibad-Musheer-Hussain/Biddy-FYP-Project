@@ -3,7 +3,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 //import 'package:biddy/ContinueAd.dart';
-import 'package:biddy/ContinueAdBetter.dart';
+import 'package:biddy/Redundant%20Dart%20Files/ContinueAdBetter.dart';
 import 'package:biddy/ContinueAdCombine.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -28,8 +28,6 @@ class CreateAd extends StatefulWidget {
 }
 
 class _CreateAdState extends State<CreateAd> {
-  final TextEditingController email = TextEditingController();
-  final TextEditingController pass = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   List<File> _images = []; // List to store selected images
   List<File> _resizedImages = []; // List to store resized images
@@ -37,10 +35,6 @@ class _CreateAdState extends State<CreateAd> {
   String titleURL = "";
   String dropdownValue = '3 Days';
   File? _image;
-  // ignore: unused_field
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final CollectionReference adsCollection =
-      FirebaseFirestore.instance.collection('Ads');
 
   void _openFullSizeImage(File image) {
     showDialog(
@@ -121,23 +115,6 @@ class _CreateAdState extends State<CreateAd> {
         );
       },
     );
-  }
-
-  Future<void> uploadCarAd(List<String> pictureUrls, String titleURL) {
-    // Generate an auto-ID for the document
-    return adsCollection
-        .doc('Cars') // Nest under "Cars" subcollection
-        .collection('SUVs') // Nest under "Sedan" subcollection
-        .add({
-          'title': titleURL,
-          'brand': email.text.toString(),
-          'model': pass.text.toString(),
-          'year': 2022,
-          'pics': pictureUrls
-          // Add other fields as needed
-        })
-        .then((value) => print('Car ad added with ID: ${value.id}'))
-        .catchError((error) => print('Failed to add car ad: $error'));
   }
 
   Future<void> resizeImages() async {

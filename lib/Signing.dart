@@ -26,8 +26,8 @@ class _Continue extends State<LoginPage> {
   List<String> signInMethods = [];
   GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   bool _showFirstContainer = true;
-  bool _showLogin = true;
-  bool registered = false;
+  bool _showLogin = true;   
+  bool registered = false; //is account logged in
   void register() async {
     try {
       await auth.createUserWithEmailAndPassword(
@@ -35,8 +35,6 @@ class _Continue extends State<LoginPage> {
         password: pass.text.toString(),
       );
       User? user = auth.currentUser;
-
-      storeToken();
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -76,15 +74,6 @@ class _Continue extends State<LoginPage> {
     }
   }
 
-  void storeToken() async {
-    String? token = await FirebaseMessaging.instance.getToken();
-    String userId = FirebaseAuth.instance.currentUser!.uid;
-
-    await FirebaseFirestore.instance.collection('users').doc(userId).set({
-      'fcmToken': token,
-    }, SetOptions(merge: true));
-  }
-
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
       final GoogleSignInAccount? googleSignInAccount =
@@ -101,7 +90,6 @@ class _Continue extends State<LoginPage> {
         final User? user = userCredential.user;
 
         if (user != null) {
-          storeToken();
           print('Signed in with Google: ${user.displayName}');
           Navigator.push(
             context,
@@ -471,7 +459,6 @@ class _Continue extends State<LoginPage> {
                   FABcustom(
                       onTap: () {
                         if (_showLogin) {
-                          print(_showLogin);
                           login();
                           pass.clear();
                         }

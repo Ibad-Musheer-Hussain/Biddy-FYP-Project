@@ -9,6 +9,7 @@ import 'package:biddy/components/CustomDrawer.dart';
 import 'package:biddy/components/FilterOptions.dart';
 import 'package:biddy/functions/animateStart.dart';
 import 'package:biddy/functions/mergeStreams.dart';
+import 'package:biddy/functions/showCustomSnackBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -55,12 +56,31 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
   late Future<List<String>> chatRoomIds;
   List<String> chatsadded = [];
   List<String> chatIds = [];
+  bool isbalance = false;
+
+  updatebalance(User user, BuildContext context) async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    var data = doc.data() as Map<String, dynamic>;
+    balance = data['balance'];
+    print(balance);
+    if (balance > 10000) {
+      isbalance = true;
+    } else {
+      isbalance = false;
+    }
+  }
 
   @override
   void initState() {
     products = [];
     super.initState();
     login();
+    if (user != null) {
+      updatebalance(user!, context);
+    }
     fetchFavourites();
     readSubcollectionDocuments('Cars/Sedan/', 0);
     loadChatrooms();
@@ -146,7 +166,13 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         _homeactive = false;
         if (user != null) {
           _changeTab(0);
-          Navigator.pushNamed(context, '/CreateAd');
+          updatebalance(user!, context);
+          if (isbalance) {
+            Navigator.pushNamed(context, '/CreateAd');
+          } else {
+            showCustomSnackBar(context, "You do not have enough balance");
+          }
+
           _changeTab(0);
         } else {
           index = 0;
@@ -288,7 +314,6 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           }
         }
         // Now, 'products' contains all the documents in the subcollection.
-
         // ignore: unused_local_variable
         for (Product product in products) {
           print(products);
@@ -1102,7 +1127,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                       document =
                                                       filteredDocs[index];
                                                   final List<dynamic>
-                                                      picsDynamic = //this shit is very imp
+                                                      picsDynamic =
                                                       document['pics'] ?? [];
                                                   final List<String>
                                                       uploadedImageUrls2 =
@@ -1297,6 +1322,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           name: name,
           balance: balance,
           onBidHistoryTap: () {
+            updatebalance(user!, context);
             _changeTab(4);
           }),
     );
