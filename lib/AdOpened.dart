@@ -1,7 +1,6 @@
 // ignore_for_file: await_only_futures, file_names, library_private_types_in_public_api, deprecated_member_use, sized_box_for_whitespace, avoid_print, non_constant_identifier_names, avoid_unnecessary_containers, unused_local_variable, prefer_const_constructors, prefer_const_literals_to_create_immutables
 
 import 'dart:async';
-import 'dart:io';
 import 'package:biddy/List/Product.dart';
 import 'package:biddy/NeedLoginDialog.dart';
 import 'package:biddy/components/BidDialog.dart';
@@ -14,15 +13,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_ml_model_downloader/firebase_ml_model_downloader.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:biddy/functions/openimagenetwork.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:http/http.dart' as http;
 
 class ItemsScreen extends StatefulWidget {
   const ItemsScreen({super.key});
@@ -60,29 +55,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
   String _csvContent = '';
   double probabilitySold = 0.0;
 
-  Future<void> _downloadCsv() async {
-    try {
-      // Get a reference to the CSV file
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('cars_with_sold_probabilities2.csv');
-
-      // Get the download URL
-      final url = await ref.getDownloadURL();
-
-      // Download the file
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        setState(() {
-          _csvContent = response.body;
-        });
-      } else {
-        throw Exception('Failed to load CSV file');
-      }
-    } catch (e) {
-      print('Error: $e');
-    }
-  }
 
   @override
   void didChangeDependencies() {
@@ -92,7 +64,6 @@ class _ItemsScreenState extends State<ItemsScreen> {
     address = arguments['id'] as String;
     Product products = arguments['product'] as Product;
     isProductInFavorites(products.id, auth?.uid);
-    _downloadCsv();
     login();
     _priceRef = FirebaseDatabase.instance
         .reference()
@@ -648,143 +619,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
     }
   }
 
-  Future<void> downloadModelAndPredict(Product product) async {
-    FirebaseModelDownloader modelDownloader = FirebaseModelDownloader.instance;
-    FirebaseCustomModel customModel = await modelDownloader.getModel(
-      'BiddyModel',
-      FirebaseModelDownloadType.localModelUpdateInBackground,
-    );
-    final modelPath = customModel.file;
-    if (modelPath != null) {
-      final result = await predictWithModel(modelPath.path, product);
-      setState(() {
-        probabilitySold = result;
-        createinsights(product);
-        //showCustomSnackBar(context, "Final result $probabilitySold");
-        print(probabilitySold);
-      });
-    }
-  }
-
-  Future<double> predictWithModel(String modelPath, Product product) async {
-    final interpreter = await Interpreter.fromFile(File(modelPath));
-    final input = createInput(product);
-    final output = List.filled(1, 0).reshape([1, 1]);
-    interpreter.run(input, output);
-
-    return output[0][0].toDouble();
-  }
-
-  List<double> createInput(Product product) {
-    String Brand = product.brand.toLowerCase();
-    String Model = product.model.toLowerCase();
-    bool Brand_Honda;
-    bool Brand_Suzuki;
-    bool Brand_Toyota;
-    bool Model_City;
-    bool Model_Civic;
-    bool Model_Corolla;
-    bool Model_Mehran;
-
-    switch (Brand) {
-      case "honda":
-        Brand_Honda = true;
-        Brand_Suzuki = false;
-        Brand_Toyota = false;
-        break;
-      case "suzuki":
-        Brand_Honda = false;
-        Brand_Suzuki = true;
-        Brand_Toyota = false;
-        break;
-      case "toyota":
-        Brand_Honda = false;
-        Brand_Suzuki = false;
-        Brand_Toyota = true;
-        break;
-      default:
-        Brand_Honda = false;
-        Brand_Suzuki = false;
-        Brand_Toyota = false;
-        print("default activated");
-    }
-
-    switch (Model) {
-      case "city":
-        Model_City = true;
-        Model_Mehran = false;
-        Model_Corolla = false;
-        Model_Civic = false;
-        break;
-      case "civic":
-        Model_City = false;
-        Model_Mehran = false;
-        Model_Corolla = false;
-        Model_Civic = true;
-        break;
-      case "corolla":
-        Model_City = false;
-        Model_Mehran = false;
-        Model_Corolla = true;
-        Model_Civic = false;
-        break;
-      case "mehran":
-        Model_City = false;
-        Model_Mehran = true;
-        Model_Corolla = false;
-        Model_Civic = false;
-        break;
-      default:
-        Model_City = false;
-        Model_Mehran = false;
-        Model_Corolla = false;
-        Model_Civic = false;
-        print("default activated");
-    }
-
-    late Map<String, Object> data;
-    try {
-      data = {
-        'KMs Driven': product.kms,
-        'Price': product.price,
-        'Year': product.year,
-        'Brand_Honda': Brand_Honda,
-        'Brand_Suzuki': Brand_Suzuki,
-        'Brand_Toyota': Brand_Toyota,
-        'Condition_Fair': false,
-        'Condition_Good': false,
-        'Condition_Poor': true,
-        'Condition_Pristine': false,
-        'Fuel_CNG': false,
-        'Fuel_Petrol': true,
-        'Model_City': Model_City,
-        'Model_Civic': Model_Civic,
-        'Model_Corolla': Model_Corolla,
-        'Model_Mehran': Model_Mehran,
-        'Registered City_Islamabad': false,
-        'Registered City_Karachi': false,
-        'Registered City_Lahore': true,
-      };
-      print(data);
-    } catch (e) {
-      showCustomSnackBar(context, "Invalid or Empty Data");
-      return [0.0];
-    }
-
-    return data.values.map((value) {
-      if (value is bool) {
-        return value ? 1.0 : 0.0;
-      } else if (value is num) {
-        return value.toDouble();
-      } else {
-        throw ArgumentError('Unsupported data type: ${value.runtimeType}');
-      }
-    }).toList();
-  }
-
   Future<void> PredictandParse(String csvContent, Product products) async {
-    downloadModelAndPredict(products);
-    _parseCsv(csvContent, products);
+    //downloadModelAndPredict(products);
+    //_parseCsv(csvContent, products);
   }
 
   void _parseCsv(String csvContent, Product product) {

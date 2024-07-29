@@ -12,8 +12,8 @@ class _SettingState extends State<Setting> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _cnicController = TextEditingController();
-  final TextEditingController _uidController = TextEditingController();
 
+  @override
   void initState() {
     super.initState();
     _nameController.text = "1.0.0";

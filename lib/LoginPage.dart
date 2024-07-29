@@ -2,11 +2,10 @@
 
 import 'dart:async';
 import 'package:biddy/ForgotPasswordDialog.dart';
-import 'package:biddy/MainScreen.dart';
+import 'package:biddy/HomePage.dart';
 import 'package:biddy/components/LoginTextField.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -26,7 +25,7 @@ class _Continue extends State<LoginPage> {
   List<String> signInMethods = [];
   GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   bool _showFirstContainer = true;
-  bool _showLogin = true;   
+  bool _showLogin = true;
   bool registered = false; //is account logged in
   void register() async {
     try {
@@ -236,7 +235,8 @@ class _Continue extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Center(
+                  Transform.translate(
+                    offset: Offset(4, -4),
                     child: Container(
                       height: 230,
                       child: Stack(
@@ -248,7 +248,7 @@ class _Continue extends State<LoginPage> {
                                 ? 2
                                 : -MediaQuery.of(context).size.width,
                             child: Container(
-                              width: MediaQuery.of(context).size.width / 1.28,
+                              width: MediaQuery.of(context).size.width / 1.32,
                               height: 217.5,
                               decoration: BoxDecoration(
                                 boxShadow: [
@@ -293,50 +293,42 @@ class _Continue extends State<LoginPage> {
                                     hintText: 'Email',
                                     obscureText: false,
                                   ),
-                                  Transform.translate(
-                                    offset: Offset(0, 8),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceAround,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              right: 70.0),
-                                          child: TextButton(
-                                              onPressed: () {
-                                                _showForgotPasswordDialog(
-                                                    context);
-                                              },
-                                              child: Text(
-                                                "Forgot Password",
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                  color: Colors.black38,
-                                                ),
-                                              )),
-                                        ),
-                                        TextButton(
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const MainPage()),
-                                              );
-                                            },
-                                            child: Text(
-                                              "Guest Login",
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                decoration:
-                                                    TextDecoration.underline,
-                                                color: Colors.black38,
-                                              ),
-                                            ))
-                                      ],
-                                    ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      TextButton(
+                                          onPressed: () {
+                                            _showForgotPasswordDialog(context);
+                                          },
+                                          child: Text(
+                                            "Forgot Password",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                              color: Colors.black38,
+                                            ),
+                                          )),
+                                      TextButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const MainPage()),
+                                            );
+                                          },
+                                          child: Text(
+                                            "Guest Login",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                              color: Colors.black38,
+                                            ),
+                                          ))
+                                    ],
                                   )
                                 ],
                               ),
@@ -349,7 +341,7 @@ class _Continue extends State<LoginPage> {
                                 ? -MediaQuery.of(context).size.width
                                 : 7,
                             child: Container(
-                              width: MediaQuery.of(context).size.width / 1.29,
+                              width: MediaQuery.of(context).size.width / 1.32,
                               height: 217.5,
                               decoration: BoxDecoration(
                                 boxShadow: [
@@ -418,25 +410,30 @@ class _Continue extends State<LoginPage> {
                                   ),
                                   Row(
                                     mainAxisAlignment:
-                                        MainAxisAlignment.spaceAround,
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 70.0),
-                                        child: TextButton(
-                                            onPressed: () {},
-                                            child: Text(
-                                              "Forgot Password",
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                decoration:
-                                                    TextDecoration.underline,
-                                                color: Colors.black38,
-                                              ),
-                                            )),
-                                      ),
                                       TextButton(
-                                          onPressed: () {},
+                                          onPressed: () {
+                                            _showForgotPasswordDialog(context);
+                                          },
+                                          child: Text(
+                                            "Forgot Password",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                              color: Colors.black38,
+                                            ),
+                                          )),
+                                      TextButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const MainPage()),
+                                            );
+                                          },
                                           child: Text(
                                             "Guest Login",
                                             style: TextStyle(
@@ -456,24 +453,29 @@ class _Continue extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  FABcustom(
-                      onTap: () {
-                        if (_showLogin) {
-                          login();
-                          pass.clear();
-                        }
-                        if (_showFirstContainer) {
-                          _checkEmailRegistration(context);
-                        }
-                        print(_showLogin);
-                        if (_showLogin == false &&
-                            _showFirstContainer == false) {
-                          print("register triggered");
-                          register();
-                        }
-                        _showFirstContainer = !_showFirstContainer;
-                      },
-                      text: _showLogin ? "Continue with email" : "Sign Up"),
+                  Center(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width / 1.32,
+                      child: FABcustom(
+                          onTap: () {
+                            if (_showLogin) {
+                              login();
+                              pass.clear();
+                            }
+                            if (_showFirstContainer) {
+                              _checkEmailRegistration(context);
+                            }
+                            print(_showLogin);
+                            if (_showLogin == false &&
+                                _showFirstContainer == false) {
+                              print("register triggered");
+                              register();
+                            }
+                            _showFirstContainer = !_showFirstContainer;
+                          },
+                          text: _showLogin ? "Continue with email" : "Sign Up"),
+                    ),
+                  ),
                   SizedBox(
                     height: 15,
                   ),
@@ -505,29 +507,48 @@ class _Continue extends State<LoginPage> {
                   SizedBox(
                     height: 15,
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      signInWithGoogle(context);
-                    },
-                    icon: Image.asset(
-                      'lib/images/google.png',
-                      height: 24.0,
-                    ),
-                    label: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 45.0, right: 50, top: 18, bottom: 18),
-                      child: Text(
-                        'Continue with Google',
-                        style: TextStyle(fontSize: 14),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width / 1.32,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        signInWithGoogle(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        elevation: 2.0,
+                        padding: EdgeInsets
+                            .zero, // Remove padding to control alignment more precisely
                       ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment
+                            .start, // Aligns the icon to the start
+                        mainAxisSize: MainAxisSize
+                            .min, // Shrinks the row to fit its children
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 18.0),
+                            child: Image.asset(
+                              'lib/images/google.png',
+                              height: 24.0,
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                  right: 55, top: 18, bottom: 18),
+                              child: Text(
+                                '    Continue with Google',
+                                style: TextStyle(fontSize: 14),
+                                textAlign: TextAlign.center, // Centers the text
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      elevation: 2.0,
                     ),
                   ),
                   SizedBox(

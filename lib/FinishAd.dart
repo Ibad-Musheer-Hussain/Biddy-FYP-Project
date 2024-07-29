@@ -1,6 +1,5 @@
-// ignore_for_file: file_names
-import 'dart:io';
-import 'package:biddy/PickImagesForAd.dart';
+// ignore_for_file: file_names, non_constant_identifier_names, unnecessary_null_comparison
+import 'package:biddy/CreateAd.dart';
 import 'package:biddy/components/FABcustom.dart';
 import 'package:biddy/functions/showCustomSnackBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,33 +9,35 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_ml_model_downloader/firebase_ml_model_downloader.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
-class ContinueAdBetter extends StatefulWidget {
-  const ContinueAdBetter({Key? key, required this.uploadImagesFuture})
+class Continueadcombine extends StatefulWidget {
+  const Continueadcombine({Key? key, required this.uploadImagesFuture})
       : super(key: key);
   final Future<AdData> uploadImagesFuture;
   @override
-  State<ContinueAdBetter> createState() => _ContinueAdBetterState();
+  State<Continueadcombine> createState() => _ContinueadcombineState();
 }
 
-class _ContinueAdBetterState extends State<ContinueAdBetter> {
+class _ContinueadcombineState extends State<Continueadcombine> {
   final formKey = GlobalKey<FormBuilderState>();
   final description = TextEditingController();
   int _countHondaPristineSoldGreaterThanPoint1 = 0;
   int _countHondaPristineSoldEqualToZero = 0;
   int pricehigher = 0;
   int pricelower = 0;
-  int selectedDays = 3;
+  int selectedDays = 0;
+  List<String> insights = [];
+  List<String> positiveInsights = [];
+  List<String> negativeInsights = [];
+  List<String> neutralInsights = [];
   String titleURL = '';
   List<String> pictureUrls = [];
-  String dropdownValue = '3 Days';
+  String dropdownValue = '2 Min';
   String CollectionValue = 'Sedan';
   String ConditionValue2 = 'Pristine';
   String TransmissionValue = 'Automatic';
@@ -49,8 +50,9 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
   final User? auth = FirebaseAuth.instance.currentUser;
   final CollectionReference adsCollection =
       FirebaseFirestore.instance.collection('Ads');
-  double? probabilitySold;
+  double probabilitySold = 0.0;
   String _csvContent = '';
+  int timestamp2 = 0;
 
   Future<void> _downloadCsv() async {
     try {
@@ -89,10 +91,10 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
       final price = double.parse(row[5].toString().trim().toLowerCase());
       pricelower =
           int.tryParse(formKey.currentState?.fields['Starting Price']?.value)! -
-              500000;
+              250000;
       pricehigher =
           int.tryParse(formKey.currentState?.fields['Starting Price']?.value)! +
-              500000;
+              250000;
       final soldProbability =
           double.parse(row[8].toString().trim().toLowerCase());
 
@@ -121,24 +123,149 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
     });
 
     if (countSoldGreaterThanPoint1 == 0 && countSoldEqualToZero == 0) {
-      _showAlertDialog(context, "Count Results",
+      _showAlertDialog(context, "Biddy Insights",
           "This model is not present at this price range in our data set");
     } else {
       _showAlertDialog(
         context,
-        "Count Results",
-        "${formKey.currentState?.fields['Brand']?.value} with Condition ${condition} Sold from price range $pricelower - $pricehigher ${formKey.currentState?.fields['Model']?.value}: $_countHondaPristineSoldGreaterThanPoint1\n${formKey.currentState?.fields['Brand']?.value} ${formKey.currentState?.fields['Model']?.value} not Sold: $_countHondaPristineSoldEqualToZero",
+        "Data Insights",
+        "${formKey.currentState?.fields['Brand']?.value} ${formKey.currentState?.fields['Model']?.value} ${condition} condition from price range $pricelower - $pricehigher\nSold: $_countHondaPristineSoldGreaterThanPoint1\nUnsold: $_countHondaPristineSoldEqualToZero",
       );
     }
   }
 
   void _showAlertDialog(BuildContext context, String title, String content) {
+    final Color positiveColor = Colors.green[100]!;
+    final Color negativeColor = Colors.red[100]!;
+    final Color neutralColor = Colors.grey[100]!;
+
+    final Icon positiveIcon =
+        Icon(Icons.thumb_up, color: Colors.green, size: 20);
+    final Icon negativeIcon =
+        Icon(Icons.thumb_down, color: Colors.red, size: 20);
+    final Icon neutralIcon = Icon(Icons.info, color: Colors.grey, size: 20);
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
-          content: Text(content),
+          backgroundColor: Colors.white,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                Icons.info,
+                color: Colors.blue,
+                size: 40,
+              ),
+              SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(content, style: TextStyle(fontSize: 14)),
+              SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Insights',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...positiveInsights.map((insight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: positiveColor,
+                                child: positiveIcon,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(insight,
+                                      style: TextStyle(
+                                          fontSize: 14.0, color: Colors.black)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                      );
+                    }).toList(),
+                    ...negativeInsights.map((insight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: negativeColor,
+                                child: negativeIcon,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(insight,
+                                      style: TextStyle(
+                                          fontSize: 14.0, color: Colors.black)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                      );
+                    }).toList(),
+                    ...neutralInsights.map((insight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: neutralColor,
+                                child: neutralIcon,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Text(insight,
+                                      style: TextStyle(
+                                          fontSize: 14.0, color: Colors.black)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8), // Gap after each neutral insight
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ],
+          ),
           actions: <Widget>[
             TextButton(
               child: Text("OK"),
@@ -152,33 +279,92 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
     );
   }
 
-  Future<void> downloadModelAndPredict() async {
-    FirebaseModelDownloader modelDownloader = FirebaseModelDownloader.instance;
-    FirebaseCustomModel customModel = await modelDownloader.getModel(
-      'BiddyModel',
-      FirebaseModelDownloadType.localModelUpdateInBackground,
-    );
-    final modelPath = customModel.file;
-    // ignore: unnecessary_null_comparison
-    if (modelPath != null) {
-      final result = await predictWithModel(modelPath.path);
-      setState(() {
-        probabilitySold = result;
-        print("final result:");
-        showCustomSnackBar(context, "Final result $probabilitySold");
-        print(probabilitySold);
-      });
+  void createinsights() {
+    positiveInsights.clear();
+    negativeInsights.clear();
+    neutralInsights.clear();
+
+    var yearValue = formKey.currentState?.fields['Year']?.value;
+    var kmsDrivenValue = formKey.currentState?.fields['KMs Driven']?.value;
+    int kmsDriven = int.parse(kmsDrivenValue);
+    var startingPriceValue =
+        formKey.currentState?.fields['Starting Price']?.value;
+    int startingPrice = int.parse(startingPriceValue);
+    if (startingPrice < 400000 && collection != "Motorbikes") {
+      negativeInsights.add(
+          "Your starting price is quite low. Ensure it reflects the value of the item.");
+      probabilitySold = probabilitySold * 0.98;
+    } else if (startingPrice >= 15000000) {
+      negativeInsights.add(
+          "Your starting price is quite high. Higher initial prices may scare buyers.");
+      probabilitySold = probabilitySold * 0.98;
     }
+
+    if (condition == "Fair" || condition == "Poor") {
+      neutralInsights.add(
+          "Vehicles with a fair or poor condition may have harder time being sold.");
+      probabilitySold = probabilitySold * 0.8;
+    } else {
+      positiveInsights.add(
+          "Vehicles with a Pristine or Good condition may have an easier time being sold.");
+    }
+
+    if (description.text.length < 40) {
+      negativeInsights.add(
+          "Empty descriptions can lose user trust. Provide a detailed description.");
+      probabilitySold = probabilitySold * 0.95;
+    } else if (description.text.length > 100) {
+      neutralInsights.add(
+          "Consider summarizing your description for clarity. Long descriptions can be overwhelming.");
+      probabilitySold = probabilitySold * 0.97;
+    }
+
+    if (kmsDriven > 150000) {
+      negativeInsights
+          .add("More driven vehicles have a harder time being sold.");
+    }
+
+    if (titleURL.isEmpty) {
+      negativeInsights.add(
+          "An empty title image may result in lower customer interactions.");
+      probabilitySold = probabilitySold * 0.9;
+    }
+
+    if (int.parse(yearValue) < 2010) {
+      negativeInsights.add("Older vehicles have a lower chance of selling.");
+      probabilitySold = probabilitySold * 0.9;
+    }
+
+    if (pictureUrls.length <= 2) {
+      negativeInsights.add("Add more pictures to enhance your listing.");
+    }
+
+    if (pictureUrls.length > 2 && pictureUrls.length < 5) {
+      neutralInsights.add("Add more pictures to enhance your listing.");
+    }
+
+    if (probabilitySold >= 0.65) {
+      positiveInsights.add(
+          "Your ad listing is in excellent shape and may require small adjustments.");
+    } else if (probabilitySold >= 0.40 && probabilitySold < 0.65) {
+      positiveInsights
+          .add("Your ad listing is fair but still could use some adjustments.");
+    } else if (probabilitySold <= 0.20) {
+      negativeInsights
+          .add("Your ad listing needs some adjustments to interest buyers.");
+      negativeInsights
+          .add("Check if you have entered the correct information.");
+    }
+
+    insights.addAll(positiveInsights);
+    insights.addAll(negativeInsights);
+    insights.addAll(neutralInsights);
   }
 
-  Future<double> predictWithModel(String modelPath) async {
-    final interpreter = await Interpreter.fromFile(File(modelPath));
-    final input = createInput();
-    final output = List.filled(1, 0).reshape([1, 1]);
-    interpreter.run(input, output);
-
-    return output[0][0].toDouble();
-  }
+  Future<void> downloadModelAndPredict() async {
+        createinsights();
+    }
+  
 
   List<double> createInput() {
     String Brand =
@@ -307,6 +493,13 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
     }
   }
 
+  Future<void> PredictandParse(
+    String csvContent,
+  ) async {
+    _parseCsv(csvContent);
+    downloadModelAndPredict();
+  }
+
   int storeTimestamp() {
     tz.initializeTimeZones();
     DateTime now = DateTime.now();
@@ -320,12 +513,41 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
     return timestampMillis;
   }
 
+  void updatebalance(User user, BuildContext context) async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    var data = doc.data() as Map<String, dynamic>;
+    int balance = data['balance'];
+    print(balance);
+
+    if (balance > 10000) {
+      balance = balance - 10000;
+    } else {
+      showCustomSnackBar(context, "Insufficient Balance");
+      Navigator.pushNamed(context, '/MainPage');
+    }
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({'balance': balance});
+  }
+
   Future<void> uploadCarAd() async {
     try {
       String documentId =
           adsCollection.doc().id; // Generate a custom document ID
       int timestampMillis = storeTimestamp(); // Get timestamp in milliseconds
-      int timestamp2 = timestampMillis + (selectedDays * 24 * 60 * 60 * 1000);
+      print("$selectedDays selected Days\n");
+      if (selectedDays == 0) {
+        timestamp2 = (timestampMillis + 120000);
+        print("$selectedDays selected Days\n");
+        print("$selectedDays selected Days\n");
+        print("$selectedDays selected Days\n");
+      } else {
+        timestamp2 = timestampMillis + (selectedDays * 24 * 60 * 60 * 1000);
+      }
 
       Map<String, dynamic> data = {
         // Create a map containing the data to be added to Firestore and the Realtime Database
@@ -388,6 +610,7 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
     } catch (error) {
       print('Failed to add car ad: $error');
     }
+    updatebalance(auth!, context);
   }
 
   @override
@@ -900,6 +1123,11 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                                 child: FormBuilderDropdown<String>(
                                   onChanged: (value) {
                                     switch (value) {
+                                      case "2 Min":
+                                        print(selectedDays);
+                                        selectedDays = 0;
+                                        break;
+
                                       case "3 Days":
                                         selectedDays = 3;
                                         break;
@@ -933,9 +1161,14 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                                       )),
                                   dropdownColor:
                                       Color.fromARGB(255, 255, 218, 223),
-                                  initialValue: "3 Days",
+                                  initialValue: "2 Min",
                                   borderRadius: BorderRadius.circular(12),
-                                  items: ['3 Days', '7 Days', '14 Days']
+                                  items: [
+                                    '2 Min',
+                                    '3 Days',
+                                    '7 Days',
+                                    '14 Days'
+                                  ]
                                       .map((dropdownValue) => DropdownMenuItem(
                                             value: dropdownValue,
                                             child: Text(dropdownValue),
@@ -955,22 +1188,10 @@ class _ContinueAdBetterState extends State<ContinueAdBetter> {
                             padding: EdgeInsets.all(16.0),
                             child: FABcustom(
                                 onTap: () {
-                                  if (formKey.currentState?.saveAndValidate() ??
-                                      false) {
-                                    downloadModelAndPredict();
-                                  } else {
-                                    showCustomSnackBar(context, "Invalid Data");
-                                  }
-                                },
-                                text: "Predict"),
-                          ),
-                          Container(
-                            padding: EdgeInsets.all(16.0),
-                            child: FABcustom(
-                                onTap: () {
                                   if (_csvContent != '') {
                                     try {
-                                      _parseCsv(_csvContent);
+                                      //_parseCsv(_csvContent);
+                                      PredictandParse(_csvContent);
                                     } catch (e) {
                                       showCustomSnackBar(
                                           context, "Invalid or Empty Data");

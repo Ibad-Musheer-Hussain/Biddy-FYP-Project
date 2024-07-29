@@ -1,7 +1,6 @@
 // ignore_for_file: file_names, prefer_const_constructors, avoid_print, sized_box_for_whitespace, prefer_const_literals_to_create_immutables, non_constant_identifier_names
 
 import 'dart:async';
-
 import 'package:biddy/List/Product.dart';
 import 'package:biddy/NeedLoginDialog.dart';
 import 'package:biddy/components/CategoryList.dart';

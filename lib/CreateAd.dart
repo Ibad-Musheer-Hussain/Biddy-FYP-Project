@@ -3,11 +3,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 //import 'package:biddy/ContinueAd.dart';
-import 'package:biddy/Redundant%20Dart%20Files/ContinueAdBetter.dart';
-import 'package:biddy/ContinueAdCombine.dart';
+import 'package:biddy/FinishAd.dart';
 import 'package:biddy/components/FABcustom.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -253,8 +250,7 @@ class _CreateAdState extends State<CreateAd> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ContinueAdBetter(
-                          uploadImagesFuture: uploadImagesFuture),
+                      builder: (context) => Continueadcombine(uploadImagesFuture: uploadImagesFuture)
                     ),
                   );
                 },

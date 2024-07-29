@@ -35,7 +35,6 @@ dependencies:
   firebase_core: ^2.31.1
   firebase_database: ^10.5.6
   firebase_messaging: ^14.9.3
-  firebase_ml_model_downloader: ^0.2.5
   firebase_storage: ^11.7.6
   flutter:
     sdk: flutter
@@ -49,8 +48,7 @@ dependencies:
   timezone: ^0.9.3
   flutter_form_builder: ^9.3.0
   form_builder_validators: ^10.0.1
-  tflite_flutter: ^0.10.4
-  image_cropper: ^7.1.0
+
 
 dev_dependencies:
   flutter_test:
