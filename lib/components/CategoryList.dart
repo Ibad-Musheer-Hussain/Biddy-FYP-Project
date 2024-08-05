@@ -35,7 +35,7 @@ class _CategoryListState extends State<CategoryList> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Color.fromARGB(255, 255, 149, 163),
+        color: Color.fromARGB(197, 14, 24, 158),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(8),
           bottomRight: Radius.circular(8),

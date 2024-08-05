@@ -48,6 +48,9 @@ dependencies:
   timezone: ^0.9.3
   flutter_form_builder: ^9.3.0
   form_builder_validators: ^10.0.1
+  google_nav_bar: ^5.0.6
+  badges: ^3.1.2
+  anim_search_bar: ^2.0.3
 
 
 dev_dependencies:

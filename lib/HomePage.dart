@@ -12,9 +12,12 @@ import 'package:biddy/functions/showCustomSnackBar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:anim_search_bar/anim_search_bar.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:badges/badges.dart' as badges;
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -48,6 +51,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
       YearMin = TextEditingController(),
       YearMax = TextEditingController(),
       KMMin = TextEditingController(),
+      textController = TextEditingController(),
       KMMax = TextEditingController();
   List<bool> expandedList = [false];
   double containerWidth = 60.0;
@@ -308,9 +312,8 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           Product product =
               Product.fromMap(subDocSnapshot.data() as Map<String, dynamic>);
           print(product);
-          if (product.timestamp2 > DateTime.now().millisecondsSinceEpoch) {
-            products.add(product);
-          }
+          products.add(product);
+          //if (product.timestamp2 > DateTime.now().millisecondsSinceEpoch) {products.add(product);}
         }
         // Now, 'products' contains all the documents in the subcollection.
         // ignore: unused_local_variable
@@ -366,60 +369,34 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         scrolledUnderElevation:
             0.0, //for disabling changing of color when scrolling app
         automaticallyImplyLeading: false,
-        backgroundColor: Color.fromARGB(255, 255, 149, 163),
+        backgroundColor: Color.fromARGB(197, 14, 24, 158),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Container(
-              margin: EdgeInsets.only(bottom: 3),
-              height: 40,
-              width: MediaQuery.of(context).size.width / 1.38,
-              child: SearchBar(
-                hintText: "Search for vehicles",
-                controller: controller,
-                trailing: [
-                  Builder(
-                    builder: (BuildContext context) {
-                      return IconButton(
-                        onPressed: () {
-                          controller.clear();
-                          priceMax.clear;
-                          priceMin.clear;
-                          YearMax.clear;
-                          YearMin.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                        icon: Icon(Icons.close),
-                        color: Colors.white,
-                      );
-                    },
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _homeactive = true;
-                    chatactive = false;
-                    historyactive = false;
-                    favoriteclicked = false;
-                    _changeTab(0);
-                    _searchQuery = value.toLowerCase();
-                  });
-                },
-                hintStyle: WidgetStateProperty.all(
-                  const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16.0,
-                  ),
+                margin: EdgeInsets.only(left: 20, bottom: 3),
+                width: MediaQuery.of(context).size.width / 1.38,
+                child: AnimSearchBar(
+                  color: Color.fromARGB(20, 14, 24, 158),
+                  rtl: true,
+                  closeSearchOnSuffixTap: true,
+                  helpText: "Search for vehicles",
+                  width: 400,
+                  textController: controller,
+                  onSuffixTap: () {},
+                  onSubmitted: (String) {
+                    setState(() {
+                      _homeactive = true;
+                      chatactive = false;
+                      historyactive = false;
+                      favoriteclicked = false;
+                      _changeTab(0);
+                      _searchQuery = controller.text.toLowerCase();
+                    });
+                  },
+                
+                )
                 ),
-                leading: IconButton(
-                  onPressed: () {},
-                  icon: Icon(Icons.search),
-                  color: Colors.white,
-                ),
-              ),
-            ),
             Container(
               width: 12,
             ),
@@ -431,11 +408,10 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                   _scaffoldKey.currentState?.openDrawer();
                 } else {
                   _showLoginDialog(context);
-                  //Navigator.pushNamed(context,'/LoginPage',arguments: {},);
                 }
               },
               child: CircleAvatar(
-                radius: 20,
+                radius: 22,
                 backgroundColor: Colors.white,
                 backgroundImage: AssetImage('lib/images/avatar.jpg'),
               ),
@@ -569,6 +545,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 )
               : historyactive
                   ? Expanded(
+                      //history
                       child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: RefreshIndicator(
@@ -1084,10 +1061,10 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                     as int; // Assuming price is stored as an integer
                                                 final year = doc['year']
                                                     as int; // Assuming year is stored as an integer
-                                                final time = doc['timestamp2'];
-                                                final currentTime =
-                                                    storeTimestamp();
-                                                return vehicleName.contains(_searchQuery) &&
+                                                //final time = doc['timestamp2'];
+                                                //final currentTime =storeTimestamp();
+                                                return vehicleName.contains(
+                                                        _searchQuery) &&
                                                     ((priceMin.text.isEmpty ||
                                                             (int.tryParse(priceMin.text.toString()) ?? 1) <=
                                                                 price) &&
@@ -1108,9 +1085,11 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                             (int.tryParse(YearMin.text.toString()) ??
                                                                     1) <=
                                                                 year) &&
-                                                        time > currentTime &&
+                                                        //time > currentTime &&
                                                         (YearMax.text.isEmpty ||
-                                                            year <= (int.tryParse(YearMax.text.toString()) ?? double.infinity)));
+                                                            year <=
+                                                                (int.tryParse(YearMax.text.toString()) ??
+                                                                    double.infinity)));
                                               }).toList();
 
                                               if (filteredDocs.isEmpty) {
@@ -1255,7 +1234,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                                                                     vertical:
                                                                         8),
                                                             child: Text(
-                                                              '${product.price}',
+                                                              '\$ ${product.price}',
                                                               style:
                                                                   const TextStyle(
                                                                       fontSize:
@@ -1275,46 +1254,52 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                     )
         ],
       ),
-      bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.white,
-          currentIndex: _selectedTab,
-          onTap: (index) => _changeTab(index),
-          unselectedItemColor: Colors.black,
-          backgroundColor:
-              Color.fromARGB(255, 255, 149, 163), // Set background color
-          items: [
-            BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.home_outlined,
-                  color: _homeactive ? Colors.white : Colors.black,
+      bottomNavigationBar: Container(
+        color: Color.fromARGB(197, 14, 24, 158),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+          child: GNav(
+              rippleColor: Colors.black.withOpacity(0.2),
+              haptic: true, // haptic feedback
+              tabBorderRadius: 28,
+              curve: Curves.ease, // tab animation curves
+              duration: Duration(milliseconds: 600), // tab animation duration
+              gap: 12, // the tab button gap between icon and text
+              color: Colors.black87, // unselected icon color
+              activeColor: Colors.white, // selected icon and text color
+              iconSize: 26, // tab button icon size
+              padding: EdgeInsets.symmetric(
+                  horizontal: 18, vertical: 8), // navigation bar padding
+              onTabChange: (index) => _changeTab(index),
+              tabs: [
+                GButton(
+                  icon: Icons.home,
+                  text: "Home",
                 ),
-                label: "Home"),
-            BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.favorite_border_outlined,
-                  color: favoriteclicked ? Colors.white : Colors.black,
+                GButton(
+                  icon: Icons.favorite,
+                  text: "Likes",
                 ),
-                label: "Favorite"),
-            BottomNavigationBarItem(icon: Icon(Icons.add), label: "Create"),
-            BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.message_outlined,
-                  color: chatactive ? Colors.white : Colors.black,
+                GButton(
+                  icon: Icons.add,
+                  text: "Create",
                 ),
-                label: "Chats"),
-            BottomNavigationBarItem(
-                icon: Icon(
-                  Icons.history,
-                  color: historyactive ? Colors.white : Colors.black,
+                GButton(
+                  icon: Icons.chat_sharp,
+                  leading: badges.Badge(
+                    badgeContent: Text('1'),
+                    child: Icon(
+                      Icons.chat_rounded,
+                      color: _selectedTab == 3 ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  text: "Chats",
                 ),
-                label: "History"),
-          ],
+                GButton(
+                  icon: Icons.history,
+                  text: "History",
+                ),
+              ]),
         ),
       ),
       drawer: CustomDrawer(
